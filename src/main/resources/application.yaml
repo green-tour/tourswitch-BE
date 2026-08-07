@@ -1,0 +1,10 @@
+server:
+  port: 8088
+spring:
+  application:
+    name: tourswitch
+    version: v1
+  web:
+    error:
+      include-stacktrace: always
+      include-message: always
