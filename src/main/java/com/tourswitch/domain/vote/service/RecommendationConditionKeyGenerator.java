@@ -1,4 +1,4 @@
-package com.tourswitch.domain.vote.support;
+package com.tourswitch.domain.vote.service;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -11,12 +11,12 @@ import java.util.stream.Collectors;
  * travel_room.recommendation_condition_key와 동일한 산출 규칙(계획 문서 7.2절).
  * "여행일|region_id|정렬한 키워드ID목록"을 sha256으로 고정 길이 값으로 만든다.
  */
-public final class RecommendationConditionKeyGenerator {
+final class RecommendationConditionKeyGenerator {
 
     private RecommendationConditionKeyGenerator() {
     }
 
-    public static String generate(LocalDate travelDate, Long regionId, List<Long> keywordIds) {
+    static String generate(LocalDate travelDate, Long regionId, List<Long> keywordIds) {
         String sortedKeywords = keywordIds.stream()
                 .sorted()
                 .map(String::valueOf)

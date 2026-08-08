@@ -5,7 +5,6 @@ import com.tourswitch.domain.vote.repository.CandidateSpotPoolQueryRepository;
 import com.tourswitch.domain.vote.repository.CandidateSpotRow;
 import com.tourswitch.domain.vote.repository.RecommendationConditionCounterQueryRepository;
 import com.tourswitch.domain.vote.repository.RoomCandidateRepository;
-import com.tourswitch.domain.vote.support.RecommendationConditionKeyGenerator;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
