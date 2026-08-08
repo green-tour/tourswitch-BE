@@ -27,6 +27,17 @@ public class RoomParticipantQueryRepository {
         return count.longValue() > 0;
     }
 
+    public boolean isHost(Long travelRoomId, Long memberId) {
+        Number count = (Number) entityManager.createNativeQuery("""
+                SELECT COUNT(*) FROM room_participant
+                WHERE travel_room_id = :travelRoomId AND member_id = :memberId AND is_host = TRUE
+                """)
+                .setParameter("travelRoomId", travelRoomId)
+                .setParameter("memberId", memberId)
+                .getSingleResult();
+        return count.longValue() > 0;
+    }
+
     public int updateSelectionCompletion(Long travelRoomId, Long memberId, boolean completed) {
         return entityManager.createNativeQuery("""
                 UPDATE room_participant
@@ -51,12 +62,19 @@ public class RoomParticipantQueryRepository {
     }
 
     private boolean hasParticipants(Long travelRoomId) {
+        return countParticipants(travelRoomId) > 0;
+    }
+
+    /**
+     * 코스 확정 시 spot_daily_demand.participant_count 증분에 쓰인다(코스 도메인, DB설계 9.4절).
+     */
+    public long countParticipants(Long travelRoomId) {
         Number count = (Number) entityManager.createNativeQuery("""
                 SELECT COUNT(*) FROM room_participant WHERE travel_room_id = :travelRoomId
                 """)
                 .setParameter("travelRoomId", travelRoomId)
                 .getSingleResult();
-        return count.longValue() > 0;
+        return count.longValue();
     }
 
     @SuppressWarnings("unchecked")

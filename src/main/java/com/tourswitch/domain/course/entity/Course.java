@@ -62,4 +62,13 @@ public class Course {
     public static Course create(Long travelRoomId, LocalDate travelDate) {
         return new Course(travelRoomId, travelDate);
     }
+
+    public void assignTotalDistance(int totalDistanceMeters) {
+        this.totalDistanceMeters = totalDistanceMeters;
+    }
+
+    public void confirm() {
+        this.status = CourseStatus.CONFIRMED;
+        this.confirmedAt = LocalDateTime.now();
+    }
 }

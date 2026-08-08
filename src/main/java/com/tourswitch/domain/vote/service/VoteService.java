@@ -1,5 +1,6 @@
 package com.tourswitch.domain.vote.service;
 
+import com.tourswitch.domain.course.service.CourseGenerationService;
 import com.tourswitch.domain.vote.entity.RoomCandidate;
 import com.tourswitch.domain.vote.entity.RoomVote;
 import com.tourswitch.domain.vote.exception.CandidateNotFoundException;
@@ -36,6 +37,7 @@ public class VoteService {
     private final RoomVoteRepository roomVoteRepository;
     private final RoomParticipantQueryRepository roomParticipantQueryRepository;
     private final TravelRoomStatusQueryRepository travelRoomStatusQueryRepository;
+    private final CourseGenerationService courseGenerationService;
 
     @Transactional
     public VoteTallyResponseDTO selectCandidate(Long travelRoomId, Long candidateId, Long memberId) {
@@ -75,7 +77,9 @@ public class VoteService {
         roomParticipantQueryRepository.updateSelectionCompletion(travelRoomId, memberId, completed);
 
         if (completed && roomParticipantQueryRepository.allParticipantsCompleted(travelRoomId)) {
-            travelRoomStatusQueryRepository.closeIfVoting(travelRoomId);
+            if (travelRoomStatusQueryRepository.closeIfVoting(travelRoomId)) {
+                courseGenerationService.generateDraftCourse(travelRoomId);
+            }
         }
 
         return getTally(travelRoomId);
