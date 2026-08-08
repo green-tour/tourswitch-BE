@@ -1,0 +1,15 @@
+springdoc:
+  swagger-ui:
+    enabled: false
+  api-docs:
+    enabled: false
+
+logging:
+  level:
+    root: INFO
+
+spring:
+  web:
+    error:
+      include-stacktrace: never
+      include-message: never

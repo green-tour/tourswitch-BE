@@ -4,7 +4,37 @@ spring:
   application:
     name: tourswitch
     version: v1
+  threads:
+    virtual:
+      enabled: true
   web:
     error:
       include-stacktrace: always
       include-message: always
+  datasource:
+    url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+springdoc:
+  swagger-ui:
+    enabled: true
+  api-docs:
+    enabled: true
+
+jwt:
+  secret: ${JWT_SECRET}
+
+kakao:
+  client-id: ${KAKAO_CLIENT_ID}
+  client-secret: ${KAKAO_CLIENT_SECRET}
+
+frontend:
+  callback-uri: ${FRONTEND_CALLBACK_URI}
