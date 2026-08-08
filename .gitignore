@@ -35,3 +35,11 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Env ###
+.env
+.env.local
+!.env.example
+
+### Docs (설계·회의 자료, 저장소에 올리지 않음) ###
+docs/
