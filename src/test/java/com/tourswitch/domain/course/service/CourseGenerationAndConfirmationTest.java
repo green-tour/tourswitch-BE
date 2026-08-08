@@ -79,7 +79,7 @@ class CourseGenerationAndConfirmationTest {
         voteService.completeSelection(travelRoomId, member2Id, true);
         voteService.completeSelection(travelRoomId, member3Id, true);
 
-        Course draftCourse = courseQueryService.getCourseByTravelRoomId(travelRoomId);
+        Course draftCourse = courseQueryService.getCourseByTravelRoomId(travelRoomId, hostMemberId);
         assertThat(draftCourse.getStatus()).isEqualTo(CourseStatus.DRAFT);
 
         List<CourseSpot> stops = courseQueryService.getStops(draftCourse.getId());

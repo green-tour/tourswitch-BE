@@ -51,10 +51,17 @@ public class RoomParticipantQueryRepository {
                 .executeUpdate();
     }
 
+    /**
+     * FOR UPDATE로 읽는다. REPEATABLE READ(MySQL 기본 격리수준)의 트랜잭션 스냅샷만 읽으면,
+     * 두 참여자가 거의 동시에 완료할 때 서로의 커밋을 못 보고 둘 다 "아직 미완료 있음"으로
+     * 판단해 방이 영영 자동 종료되지 않는 경쟁 조건이 생길 수 있다. FOR UPDATE(락킹 리드)는
+     * 스냅샷을 우회해 항상 최신 커밋 데이터를 읽으므로 이 문제를 막는다.
+     */
     public boolean allParticipantsCompleted(Long travelRoomId) {
         Number incompleteCount = (Number) entityManager.createNativeQuery("""
                 SELECT COUNT(*) FROM room_participant
                 WHERE travel_room_id = :travelRoomId AND is_selection_completed = FALSE
+                FOR UPDATE
                 """)
                 .setParameter("travelRoomId", travelRoomId)
                 .getSingleResult();

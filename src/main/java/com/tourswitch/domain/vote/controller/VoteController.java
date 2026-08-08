@@ -49,7 +49,7 @@ public class VoteController {
     }
 
     @GetMapping("/votes/tally")
-    public GlobalRes<VoteTallyResponseDTO> getTally(@PathVariable Long roomId) {
-        return GlobalRes.success(voteService.getTally(roomId));
+    public GlobalRes<VoteTallyResponseDTO> getTally(@PathVariable Long roomId, @RequestParam Long memberId) {
+        return GlobalRes.success(voteService.getTally(roomId, memberId));
     }
 }

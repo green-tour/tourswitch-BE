@@ -54,7 +54,7 @@ public class VoteService {
             }
         }
 
-        return getTally(travelRoomId);
+        return buildTally(travelRoomId);
     }
 
     @Transactional
@@ -66,7 +66,7 @@ public class VoteService {
         roomVoteRepository.findByRoomCandidateIdAndMemberId(candidateId, memberId)
                 .ifPresent(roomVoteRepository::delete);
 
-        return getTally(travelRoomId);
+        return buildTally(travelRoomId);
     }
 
     @Transactional
@@ -82,10 +82,15 @@ public class VoteService {
             }
         }
 
-        return getTally(travelRoomId);
+        return buildTally(travelRoomId);
     }
 
-    public VoteTallyResponseDTO getTally(Long travelRoomId) {
+    public VoteTallyResponseDTO getTally(Long travelRoomId, Long memberId) {
+        requireParticipant(travelRoomId, memberId);
+        return buildTally(travelRoomId);
+    }
+
+    private VoteTallyResponseDTO buildTally(Long travelRoomId) {
         List<RoomCandidate> candidates = roomCandidateRepository.findByTravelRoomIdOrderByDisplayOrderAsc(
                 travelRoomId);
         List<Long> candidateIds = candidates.stream().map(RoomCandidate::getId).toList();

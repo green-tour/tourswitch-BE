@@ -26,8 +26,8 @@ public class CourseController {
     private final CourseConfirmationService courseConfirmationService;
 
     @GetMapping("/api/rooms/{roomId}/course")
-    public GlobalRes<CourseResponseDTO> getCourse(@PathVariable Long roomId) {
-        return GlobalRes.success(toResponse(courseQueryService.getCourseByTravelRoomId(roomId)));
+    public GlobalRes<CourseResponseDTO> getCourse(@PathVariable Long roomId, @RequestParam Long memberId) {
+        return GlobalRes.success(toResponse(courseQueryService.getCourseByTravelRoomId(roomId, memberId)));
     }
 
     @PatchMapping("/api/courses/{courseId}/status")
