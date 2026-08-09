@@ -1,5 +1,6 @@
 package com.tourswitch.domain.vote.service;
 
+import com.tourswitch.domain.course.service.CourseGenerationService;
 import com.tourswitch.domain.vote.entity.RoomCandidate;
 import com.tourswitch.domain.vote.entity.RoomVote;
 import com.tourswitch.domain.vote.exception.CandidateNotFoundException;
@@ -36,6 +37,7 @@ public class VoteService {
     private final RoomVoteRepository roomVoteRepository;
     private final RoomParticipantQueryRepository roomParticipantQueryRepository;
     private final TravelRoomStatusQueryRepository travelRoomStatusQueryRepository;
+    private final CourseGenerationService courseGenerationService;
 
     @Transactional
     public VoteTallyResponseDTO selectCandidate(Long travelRoomId, Long candidateId, Long memberId) {
@@ -52,7 +54,7 @@ public class VoteService {
             }
         }
 
-        return getTally(travelRoomId);
+        return buildTally(travelRoomId);
     }
 
     @Transactional
@@ -64,7 +66,7 @@ public class VoteService {
         roomVoteRepository.findByRoomCandidateIdAndMemberId(candidateId, memberId)
                 .ifPresent(roomVoteRepository::delete);
 
-        return getTally(travelRoomId);
+        return buildTally(travelRoomId);
     }
 
     @Transactional
@@ -75,13 +77,20 @@ public class VoteService {
         roomParticipantQueryRepository.updateSelectionCompletion(travelRoomId, memberId, completed);
 
         if (completed && roomParticipantQueryRepository.allParticipantsCompleted(travelRoomId)) {
-            travelRoomStatusQueryRepository.closeIfVoting(travelRoomId);
+            if (travelRoomStatusQueryRepository.closeIfVoting(travelRoomId)) {
+                courseGenerationService.generateDraftCourse(travelRoomId);
+            }
         }
 
-        return getTally(travelRoomId);
+        return buildTally(travelRoomId);
     }
 
-    public VoteTallyResponseDTO getTally(Long travelRoomId) {
+    public VoteTallyResponseDTO getTally(Long travelRoomId, Long memberId) {
+        requireParticipant(travelRoomId, memberId);
+        return buildTally(travelRoomId);
+    }
+
+    private VoteTallyResponseDTO buildTally(Long travelRoomId) {
         List<RoomCandidate> candidates = roomCandidateRepository.findByTravelRoomIdOrderByDisplayOrderAsc(
                 travelRoomId);
         List<Long> candidateIds = candidates.stream().map(RoomCandidate::getId).toList();
