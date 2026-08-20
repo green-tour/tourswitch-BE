@@ -6,16 +6,24 @@ import com.tourswitch.domain.vote.entity.RoomVote;
 import com.tourswitch.domain.vote.exception.CandidateNotFoundException;
 import com.tourswitch.domain.vote.exception.VoteAccessDeniedException;
 import com.tourswitch.domain.vote.exception.VoteSessionNotActiveException;
+import com.tourswitch.domain.vote.repository.CandidateDetailQueryRepository;
+import com.tourswitch.domain.vote.repository.CandidateDetailRow;
 import com.tourswitch.domain.vote.repository.CandidateVoteCount;
 import com.tourswitch.domain.vote.repository.RoomCandidateRepository;
 import com.tourswitch.domain.vote.repository.RoomParticipantQueryRepository;
 import com.tourswitch.domain.vote.repository.RoomVoteRepository;
 import com.tourswitch.domain.vote.repository.TravelRoomStatusQueryRepository;
+import com.tourswitch.domain.vote.response.CandidateCardResponseDTO;
+import com.tourswitch.domain.vote.response.CandidateGroupResponseDTO;
+import com.tourswitch.domain.vote.response.CandidateListResponseDTO;
 import com.tourswitch.domain.vote.response.CandidateTallyResponseDTO;
 import com.tourswitch.domain.vote.response.ParticipantStatusResponseDTO;
 import com.tourswitch.domain.vote.response.VoteTallyResponseDTO;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -37,7 +45,33 @@ public class VoteService {
     private final RoomVoteRepository roomVoteRepository;
     private final RoomParticipantQueryRepository roomParticipantQueryRepository;
     private final TravelRoomStatusQueryRepository travelRoomStatusQueryRepository;
+    private final CandidateDetailQueryRepository candidateDetailQueryRepository;
     private final CourseGenerationService courseGenerationService;
+
+    public CandidateListResponseDTO getCandidateList(Long travelRoomId, Long memberId) {
+        requireParticipant(travelRoomId, memberId);
+
+        List<CandidateDetailRow> rows = candidateDetailQueryRepository.findCandidateDetails(travelRoomId);
+        List<Long> candidateIds = rows.stream().map(CandidateDetailRow::candidateId).toList();
+        Set<Long> myVotedCandidateIds = candidateIds.isEmpty()
+                ? Set.of()
+                : roomVoteRepository.findByRoomCandidateIdIn(candidateIds).stream()
+                        .filter(vote -> vote.getMemberId().equals(memberId))
+                        .map(vote -> vote.getRoomCandidate().getId())
+                        .collect(Collectors.toSet());
+
+        Map<Long, CandidateGroupBuilder> groupsByKeywordId = new LinkedHashMap<>();
+        for (CandidateDetailRow row : rows) {
+            CandidateGroupBuilder group = groupsByKeywordId.computeIfAbsent(row.keywordId(),
+                    keywordId -> new CandidateGroupBuilder(keywordId, row.keywordName()));
+            group.items.add(CandidateCardResponseDTO.of(row, myVotedCandidateIds.contains(row.candidateId())));
+        }
+
+        List<CandidateGroupResponseDTO> candidateGroups = groupsByKeywordId.values().stream()
+                .map(group -> new CandidateGroupResponseDTO(group.keywordId, group.keywordName, group.items))
+                .toList();
+        return new CandidateListResponseDTO(candidateGroups, rows.size());
+    }
 
     @Transactional
     public VoteTallyResponseDTO selectCandidate(Long travelRoomId, Long candidateId, Long memberId) {
@@ -134,5 +168,16 @@ public class VoteService {
             throw new CandidateNotFoundException("이 방에 속하지 않는 후보 카드입니다.");
         }
         return candidate;
+    }
+
+    private static final class CandidateGroupBuilder {
+        private final Long keywordId;
+        private final String keywordName;
+        private final List<CandidateCardResponseDTO> items = new ArrayList<>();
+
+        private CandidateGroupBuilder(Long keywordId, String keywordName) {
+            this.keywordId = keywordId;
+            this.keywordName = keywordName;
+        }
     }
 }

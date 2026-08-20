@@ -1,6 +1,7 @@
 package com.tourswitch.domain.vote.controller;
 
 import com.tourswitch.domain.vote.request.CompletionRequestDTO;
+import com.tourswitch.domain.vote.response.CandidateListResponseDTO;
 import com.tourswitch.domain.vote.response.VoteTallyResponseDTO;
 import com.tourswitch.domain.vote.service.VoteService;
 import com.tourswitch.global.response.GlobalRes;
@@ -26,6 +27,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class VoteController {
 
     private final VoteService voteService;
+
+    @GetMapping("/candidates")
+    public GlobalRes<CandidateListResponseDTO> getCandidates(@PathVariable Long roomId,
+                                                               @RequestParam Long memberId) {
+        return GlobalRes.success(voteService.getCandidateList(roomId, memberId));
+    }
 
     @PutMapping("/votes/{candidateId}")
     public GlobalRes<VoteTallyResponseDTO> selectCandidate(@PathVariable Long roomId,
