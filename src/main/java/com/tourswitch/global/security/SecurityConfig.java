@@ -1,26 +1,80 @@
 package com.tourswitch.global.security;
 
+import com.tourswitch.global.security.handler.CustomAccessDeniedHandler;
+import com.tourswitch.global.security.handler.CustomAuthenticationEntryPoint;
+import com.tourswitch.global.security.jwt.JwtAuthenticationFilter;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-/**
- * 소셜 로그인/JWT 검증 필터는 회원 도메인 담당자가 배선한다.
- * 이 설정은 그 전까지 모든 요청이 기본 로그인 화면에 막히지 않도록 하는 임시 베이스라인이다.
- */
 @Configuration
-@EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
 
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final CustomAuthenticationEntryPoint authenticationEntryPoint;
+    private final CustomAccessDeniedHandler accessDeniedHandler;
+
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(
+        HttpSecurity http
+    ) throws Exception {
+
         http
-                .csrf(csrf -> csrf.disable())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+            .csrf(AbstractHttpConfigurer::disable)
+
+            .formLogin(AbstractHttpConfigurer::disable)
+
+            .httpBasic(AbstractHttpConfigurer::disable)
+
+            .sessionManagement(session ->
+                session.sessionCreationPolicy(
+                    SessionCreationPolicy.STATELESS
+                )
+            )
+
+            .exceptionHandling(exception ->
+                exception
+                    .authenticationEntryPoint(
+                        authenticationEntryPoint
+                    )
+                    .accessDeniedHandler(
+                        accessDeniedHandler
+                    )
+            )
+
+            .authorizeHttpRequests(auth ->
+                auth
+                    .requestMatchers(
+                        HttpMethod.OPTIONS,
+                        "/**"
+                    ).permitAll()
+
+                    .requestMatchers(
+                        HttpMethod.POST,
+                        "/api/auth/login",
+                        "/api/auth/refresh"
+                    ).permitAll()
+
+                    .requestMatchers(
+                        "/api/users/me",
+                        "/api/auth/logout"
+                    ).authenticated()
+
+                    .anyRequest().permitAll()
+            )
+
+            .addFilterBefore(
+                jwtAuthenticationFilter,
+                UsernamePasswordAuthenticationFilter.class
+            );
+
         return http.build();
     }
 }
