@@ -1,7 +1,9 @@
 package com.tourswitch.global.error;
 
+import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
+@Getter
 public enum CustomResponseCode {
 
     NORMAL_CODE("00", HttpStatus.OK),
@@ -37,11 +39,4 @@ public enum CustomResponseCode {
         this.httpStatus = httpStatus;
     }
 
-    public String getCode() {
-        return code;
-    }
-
-    public HttpStatus getHttpStatus() {
-        return httpStatus;
-    }
 }

@@ -12,6 +12,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContext;
@@ -34,9 +35,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(
-        HttpServletRequest request,
-        HttpServletResponse response,
-        FilterChain filterChain
+        @NonNull HttpServletRequest request,
+        @NonNull HttpServletResponse response,
+        @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
 
         try {
@@ -87,16 +88,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 response
             );
 
-        } catch (TokenException exception) {
-            SecurityContextHolder.clearContext();
-
-            securityErrorResponseWriter.write(
-                response,
-                exception.getCode(),
-                exception.getMessage()
-            );
-
-        } catch (WithdrawnMemberException exception) {
+        } catch (
+            TokenException | WithdrawnMemberException exception
+        ) {
             SecurityContextHolder.clearContext();
 
             securityErrorResponseWriter.write(

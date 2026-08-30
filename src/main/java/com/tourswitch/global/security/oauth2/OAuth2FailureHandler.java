@@ -30,7 +30,7 @@ public class OAuth2FailureHandler
         @NonNull HttpServletRequest request,
         HttpServletResponse response,
         @NonNull AuthenticationException exception
-    ) throws IOException, ServletException {
+    ) throws IOException {
 
         String responseCode =
             resolveResponseCode(exception);

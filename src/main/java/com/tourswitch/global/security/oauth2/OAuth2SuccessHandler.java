@@ -34,7 +34,7 @@ public class OAuth2SuccessHandler
         @NonNull HttpServletRequest request,
         HttpServletResponse response,
         Authentication authentication
-    ) throws IOException, ServletException {
+    ) throws IOException {
 
         OAuth2MemberPrincipal principal =
             (OAuth2MemberPrincipal) authentication.getPrincipal();
