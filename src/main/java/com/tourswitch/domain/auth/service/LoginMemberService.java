@@ -3,18 +3,17 @@ package com.tourswitch.domain.auth.service;
 import com.tourswitch.domain.member.entity.Member;
 import com.tourswitch.domain.member.entity.MemberStatus;
 import com.tourswitch.domain.member.entity.SocialProvider;
-import com.tourswitch.domain.member.exception.MemberNotFoundException;
 import com.tourswitch.domain.member.exception.WithdrawnMemberException;
 import com.tourswitch.domain.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class LoginMemberService {
 
     private final MemberRepository memberRepository;
@@ -35,26 +34,6 @@ public class LoginMemberService {
             .orElseGet(() ->
                 createNewMember(socialId, nickname)
             );
-    }
-
-    /**
-     * 로그인 회원의 Refresh Token 정보 저장
-     */
-    @Transactional
-    public void saveRefreshToken(
-        Long memberId,
-        String refreshTokenHash,
-        LocalDateTime refreshTokenExpiresAt
-    ) {
-        Member member = memberRepository.findById(memberId)
-            .orElseThrow(MemberNotFoundException::new);
-
-        validateActiveMember(member);
-
-        member.updateRefreshToken(
-            refreshTokenHash,
-            refreshTokenExpiresAt
-        );
     }
 
     /**
@@ -105,7 +84,6 @@ public class LoginMemberService {
     /**
      * 기존 카카오 회원 조회
      */
-    @Transactional(readOnly = true)
     public Optional<LoginMemberResult> findExistingKakaoMember(
         String socialId
     ) {

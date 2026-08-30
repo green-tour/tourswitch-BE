@@ -1,10 +1,6 @@
 package com.tourswitch.domain.auth.controller;
 
-import com.tourswitch.domain.auth.request.KakaoLoginRequestDTO;
-import com.tourswitch.domain.auth.response.LoginResponseDTO;
 import com.tourswitch.domain.auth.response.RefreshResponseDTO;
-import com.tourswitch.domain.auth.service.AuthLoginResult;
-import com.tourswitch.domain.auth.service.AuthService;
 import com.tourswitch.domain.auth.service.RefreshTokenService;
 import com.tourswitch.global.response.GlobalRes;
 import com.tourswitch.global.security.cookie.RefreshTokenCookieManager;
@@ -12,49 +8,21 @@ import com.tourswitch.global.security.jwt.TokenPair;
 import com.tourswitch.global.security.principal.UserPrincipal;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    private final AuthService authService;
     private final RefreshTokenService refreshTokenService;
     private final RefreshTokenCookieManager refreshTokenCookieManager;
-
-    /**
-     * 카카오 로그인
-     */
-    @PostMapping("/login")
-    public GlobalRes<LoginResponseDTO> login(
-        @Valid @RequestBody KakaoLoginRequestDTO request,
-        HttpServletResponse response
-    ) {
-        AuthLoginResult result =
-            authService.login(request);
-
-        ResponseCookie refreshTokenCookie =
-            refreshTokenCookieManager
-                .createRefreshTokenCookie(
-                    result.tokenPair().refreshToken()
-                );
-
-        response.addHeader(
-            HttpHeaders.SET_COOKIE,
-            refreshTokenCookie.toString()
-        );
-
-        LoginResponseDTO loginResponse =
-            LoginResponseDTO.from(result);
-
-        return GlobalRes.success(loginResponse);
-    }
 
     /**
      * Access Token 재발급

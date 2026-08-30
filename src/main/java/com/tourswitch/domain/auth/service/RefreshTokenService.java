@@ -5,7 +5,6 @@ import com.tourswitch.domain.member.entity.MemberStatus;
 import com.tourswitch.domain.member.exception.MemberNotFoundException;
 import com.tourswitch.domain.member.exception.WithdrawnMemberException;
 import com.tourswitch.domain.member.repository.MemberRepository;
-import com.tourswitch.global.config.security.JwtProperties;
 import com.tourswitch.global.security.exception.TokenException;
 import com.tourswitch.global.security.jwt.JwtProvider;
 import com.tourswitch.global.security.jwt.RefreshTokenHasher;
@@ -129,5 +128,24 @@ public class RefreshTokenService {
             .orElseThrow(MemberNotFoundException::new);
 
         member.clearRefreshToken();
+    }
+
+    /**
+     * 로그인 성공 시 Refresh Token 정보 저장
+     */
+    @Transactional
+    public void saveRefreshToken(
+        Long memberId,
+        TokenPair tokenPair
+    ) {
+        Member member = memberRepository.findById(memberId)
+            .orElseThrow(MemberNotFoundException::new);
+
+        validateActiveMember(member);
+
+        updateRefreshToken(
+            member,
+            tokenPair
+        );
     }
 }
