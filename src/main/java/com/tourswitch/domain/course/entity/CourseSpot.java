@@ -86,4 +86,22 @@ public class CourseSpot {
         return new CourseSpot(course, touristSpotId, spotRole, visitOrder, spotTitleSnapshot,
                 concentrationRateSnapshot, voteCountSnapshot);
     }
+
+    /**
+     * 여행 당일 대체 장소를 현재 경유지에 반영한다. 투표를 거치지 않은 장소이므로 기존 투표·집중률
+     * 스냅샷은 새 장소에 유효하지 않아 비운다.
+     */
+    public void replaceWith(Long replacementTouristSpotId, String replacementSpotTitle,
+                            LocalDateTime replacementTime) {
+        if (Boolean.TRUE.equals(isReplaced)) {
+            throw new IllegalStateException("이미 교체된 코스 장소입니다.");
+        }
+        this.replacedFromSpotId = this.touristSpotId;
+        this.touristSpotId = replacementTouristSpotId;
+        this.spotTitleSnapshot = replacementSpotTitle;
+        this.concentrationRateSnapshot = null;
+        this.voteCountSnapshot = null;
+        this.isReplaced = true;
+        this.replacedAt = replacementTime;
+    }
 }
