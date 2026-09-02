@@ -39,8 +39,18 @@ public class CandidateCompositionService {
     private final RoomCandidateRepository roomCandidateRepository;
 
     public void composeCandidates(Long travelRoomId, Long regionId, LocalDate travelDate, List<Long> keywordIds) {
+        CandidateCompositionPlan plan = preparePlan(regionId, travelDate, keywordIds);
+        composeCandidates(travelRoomId, regionId, travelDate, keywordIds, plan.candidateOffset());
+    }
+
+    public CandidateCompositionPlan preparePlan(Long regionId, LocalDate travelDate, List<Long> keywordIds) {
         String conditionKey = RecommendationConditionKeyGenerator.generate(travelDate, regionId, keywordIds);
         int rawOffset = conditionCounterQueryRepository.incrementAndGetRawOffset(conditionKey);
+        return new CandidateCompositionPlan(conditionKey, rawOffset);
+    }
+
+    public void composeCandidates(Long travelRoomId, Long regionId, LocalDate travelDate, List<Long> keywordIds,
+                                  int rawOffset) {
 
         List<ScoredCandidate> deduped = dedupeAndScore(regionId, travelDate, keywordIds);
         Map<Long, List<ScoredCandidate>> rankedByKeyword = deduped.stream()

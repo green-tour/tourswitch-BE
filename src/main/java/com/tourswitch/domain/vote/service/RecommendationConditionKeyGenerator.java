@@ -11,12 +11,12 @@ import java.util.stream.Collectors;
  * travel_room.recommendation_condition_key와 동일한 산출 규칙(계획 문서 7.2절).
  * "여행일|region_id|정렬한 키워드ID목록"을 sha256으로 고정 길이 값으로 만든다.
  */
-final class RecommendationConditionKeyGenerator {
+public final class RecommendationConditionKeyGenerator {
 
     private RecommendationConditionKeyGenerator() {
     }
 
-    static String generate(LocalDate travelDate, Long regionId, List<Long> keywordIds) {
+    public static String generate(LocalDate travelDate, Long regionId, List<Long> keywordIds) {
         String sortedKeywords = keywordIds.stream()
                 .sorted()
                 .map(String::valueOf)
