@@ -8,9 +8,10 @@ import java.util.Optional;
 import org.springframework.stereotype.Repository;
 
 /**
- * spot_area_link/seoul_realtime_area는 이 도메인이 소유하지 않는 테이블이라
- * JPA 엔티티로 매핑하지 않고 네이티브 쿼리로 읽기 전용 조회만 한다(B1 규칙).
- * 6.2절 규칙 3에 따라 규모 대리값은 INSIDE_BOUNDARY 매칭만 인정한다.
+ * seoul_realtime_area는 한국관광공사 API가 아닌 서울 열린데이터광장 데이터라 로컬 보관 대상이다
+ * (TourAPI 실시간전환 계획 문서 2절). 좌표는 더 이상 로컬 tourist_spot에서 조회하지 않고
+ * 호출부(CandidateScoreCalculator)가 TourAPI 응답 좌표를 그대로 넘긴다 - boundary가 이미
+ * POLYGON SRID 4326이라 ST_Contains로 즉석 판정한다.
  */
 @Repository
 public class RegionDemandBaselineQueryRepository {
@@ -18,16 +19,15 @@ public class RegionDemandBaselineQueryRepository {
     @PersistenceContext
     private EntityManager entityManager;
 
-    public Optional<Integer> findPrimaryReferencePopulationMax(Long touristSpotId) {
+    public Optional<Integer> findPrimaryReferencePopulationMax(double latitude, double longitude) {
         List<?> results = entityManager.createNativeQuery("""
-                SELECT sra.reference_population_max
-                FROM spot_area_link sal
-                JOIN seoul_realtime_area sra ON sra.id = sal.seoul_realtime_area_id
-                WHERE sal.tourist_spot_id = :touristSpotId
-                  AND sal.is_primary = TRUE
-                  AND sal.match_method = 'INSIDE_BOUNDARY'
+                SELECT reference_population_max
+                FROM seoul_realtime_area
+                WHERE ST_Contains(boundary, ST_SRID(POINT(:longitude, :latitude), 4326))
+                LIMIT 1
                 """)
-                .setParameter("touristSpotId", touristSpotId)
+                .setParameter("longitude", longitude)
+                .setParameter("latitude", latitude)
                 .getResultList();
         if (results.isEmpty() || results.get(0) == null) {
             return Optional.empty();
@@ -35,22 +35,29 @@ public class RegionDemandBaselineQueryRepository {
         return Optional.of(((Number) results.get(0)).intValue());
     }
 
+    private static final int NEARBY_AREA_SAMPLE_SIZE = 5;
+
     /**
-     * 6.2절 규칙 4 폴백: 자치구 안에서 INSIDE 연결된 영역들의 규모 대리값 목록(자치구 표본).
-     * 영역 단위로 중복 제거한다(같은 영역에 여러 관광지가 연결될 수 있으므로).
+     * 6.2절 규칙 4 폴백: 자치구 규모 대리값 표본. 기존에는 그 자치구에 속한 관광지들이
+     * INSIDE_BOUNDARY로 연결된 영역 전체를 표본으로 삼았으나, 로컬 tourist_spot이 없어져
+     * 그 경로를 쓸 수 없다 - 대신 region 중심좌표에서 가장 가까운 seoul_realtime_area
+     * NEARBY_AREA_SAMPLE_SIZE개를 표본으로 근사한다.
      */
     @SuppressWarnings("unchecked")
     public List<Integer> findRegionInsideAreaPopulations(Long regionId) {
         List<Object[]> rows = entityManager.createNativeQuery("""
-                SELECT DISTINCT sra.id, sra.reference_population_max
-                FROM spot_area_link sal
-                JOIN tourist_spot ts ON ts.id = sal.tourist_spot_id
-                JOIN seoul_realtime_area sra ON sra.id = sal.seoul_realtime_area_id
-                WHERE ts.region_id = :regionId
-                  AND sal.match_method = 'INSIDE_BOUNDARY'
-                  AND sra.reference_population_max IS NOT NULL
+                SELECT sra.id, sra.reference_population_max
+                FROM region r
+                JOIN seoul_realtime_area sra ON sra.reference_population_max IS NOT NULL
+                WHERE r.id = :regionId
+                ORDER BY ST_Distance_Sphere(
+                    ST_SRID(POINT(sra.longitude, sra.latitude), 4326),
+                    ST_SRID(POINT(r.center_longitude, r.center_latitude), 4326)
+                ) ASC
+                LIMIT :sampleSize
                 """)
                 .setParameter("regionId", regionId)
+                .setParameter("sampleSize", NEARBY_AREA_SAMPLE_SIZE)
                 .getResultList();
 
         List<Integer> populations = new ArrayList<>(rows.size());

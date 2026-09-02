@@ -40,8 +40,8 @@ public class CourseSpot {
     @JoinColumn(name = "course_id", nullable = false)
     private Course course;
 
-    @Column(name = "tourist_spot_id", nullable = false)
-    private Long touristSpotId;
+    @Column(name = "content_id", nullable = false, length = 50)
+    private String contentId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "spot_role", nullable = false, length = 20)
@@ -62,16 +62,16 @@ public class CourseSpot {
     @Column(name = "is_replaced", nullable = false)
     private Boolean isReplaced;
 
-    @Column(name = "replaced_from_spot_id")
-    private Long replacedFromSpotId;
+    @Column(name = "replaced_from_spot_id", length = 50)
+    private String replacedFromSpotId;
 
     @Column(name = "replaced_at")
     private LocalDateTime replacedAt;
 
-    private CourseSpot(Course course, Long touristSpotId, SpotRole spotRole, Integer visitOrder,
+    private CourseSpot(Course course, String contentId, SpotRole spotRole, Integer visitOrder,
                         String spotTitleSnapshot, BigDecimal concentrationRateSnapshot, Integer voteCountSnapshot) {
         this.course = course;
-        this.touristSpotId = touristSpotId;
+        this.contentId = contentId;
         this.spotRole = spotRole;
         this.visitOrder = visitOrder;
         this.spotTitleSnapshot = spotTitleSnapshot;
@@ -80,10 +80,10 @@ public class CourseSpot {
         this.isReplaced = false;
     }
 
-    public static CourseSpot create(Course course, Long touristSpotId, SpotRole spotRole, Integer visitOrder,
+    public static CourseSpot create(Course course, String contentId, SpotRole spotRole, Integer visitOrder,
                                      String spotTitleSnapshot, BigDecimal concentrationRateSnapshot,
                                      Integer voteCountSnapshot) {
-        return new CourseSpot(course, touristSpotId, spotRole, visitOrder, spotTitleSnapshot,
+        return new CourseSpot(course, contentId, spotRole, visitOrder, spotTitleSnapshot,
                 concentrationRateSnapshot, voteCountSnapshot);
     }
 }

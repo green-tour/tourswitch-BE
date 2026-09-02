@@ -5,7 +5,7 @@ import com.tourswitch.domain.course.entity.CourseExtraCandidate;
 public record CourseExtraCandidateResponseDTO(
         Long id,
         Long anchorCourseSpotId,
-        Long touristSpotId,
+        String contentId,
         String spotRole,
         Integer distanceMeters,
         Integer displayOrder,
@@ -16,7 +16,7 @@ public record CourseExtraCandidateResponseDTO(
         return new CourseExtraCandidateResponseDTO(
                 candidate.getId(),
                 candidate.getAnchorCourseSpot().getId(),
-                candidate.getTouristSpotId(),
+                candidate.getContentId(),
                 candidate.getSpotRole().name(),
                 candidate.getDistanceMeters(),
                 candidate.getDisplayOrder(),

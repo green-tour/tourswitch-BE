@@ -26,7 +26,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "course_extra_candidate", uniqueConstraints = {
         @UniqueConstraint(name = "uk_course_extra_candidate",
-                columnNames = {"course_id", "anchor_course_spot_id", "tourist_spot_id"})
+                columnNames = {"course_id", "anchor_course_spot_id", "content_id"})
 })
 public class CourseExtraCandidate {
 
@@ -42,8 +42,8 @@ public class CourseExtraCandidate {
     @JoinColumn(name = "anchor_course_spot_id", nullable = false)
     private CourseSpot anchorCourseSpot;
 
-    @Column(name = "tourist_spot_id", nullable = false)
-    private Long touristSpotId;
+    @Column(name = "content_id", nullable = false, length = 50)
+    private String contentId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "spot_role", nullable = false, length = 20)
@@ -58,20 +58,20 @@ public class CourseExtraCandidate {
     @Column(name = "is_selected", nullable = false)
     private Boolean isSelected;
 
-    private CourseExtraCandidate(Course course, CourseSpot anchorCourseSpot, Long touristSpotId, SpotRole spotRole,
+    private CourseExtraCandidate(Course course, CourseSpot anchorCourseSpot, String contentId, SpotRole spotRole,
                                   Integer distanceMeters, Integer displayOrder) {
         this.course = course;
         this.anchorCourseSpot = anchorCourseSpot;
-        this.touristSpotId = touristSpotId;
+        this.contentId = contentId;
         this.spotRole = spotRole;
         this.distanceMeters = distanceMeters;
         this.displayOrder = displayOrder;
         this.isSelected = false;
     }
 
-    public static CourseExtraCandidate create(Course course, CourseSpot anchorCourseSpot, Long touristSpotId,
+    public static CourseExtraCandidate create(Course course, CourseSpot anchorCourseSpot, String contentId,
                                                SpotRole spotRole, Integer distanceMeters, Integer displayOrder) {
-        return new CourseExtraCandidate(course, anchorCourseSpot, touristSpotId, spotRole, distanceMeters,
+        return new CourseExtraCandidate(course, anchorCourseSpot, contentId, spotRole, distanceMeters,
                 displayOrder);
     }
 
