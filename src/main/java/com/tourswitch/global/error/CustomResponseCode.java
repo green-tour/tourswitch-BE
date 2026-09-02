@@ -1,7 +1,9 @@
 package com.tourswitch.global.error;
 
+import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
+@Getter
 public enum CustomResponseCode {
 
     NORMAL_CODE("00", HttpStatus.OK),
@@ -21,6 +23,8 @@ public enum CustomResponseCode {
     TEMPORARILY_DISABLE_THE_SERVICEKEY_ERROR("21", HttpStatus.SERVICE_UNAVAILABLE),
     LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR("22", HttpStatus.TOO_MANY_REQUESTS),
     SESSION_STATE_CONFLICT("23", HttpStatus.CONFLICT),
+    WITHDRAWN_USER("26", HttpStatus.FORBIDDEN),
+    KAKAO_OAUTH_ERROR("28", HttpStatus.BAD_GATEWAY),
     SERVICE_KEY_IS_NOT_REGISTERED_ERROR("30", HttpStatus.BAD_GATEWAY),
     DEADLINE_HAS_EXPIRED_ERROR("31", HttpStatus.BAD_GATEWAY),
     UNREGISTERED_IP_ERROR("32", HttpStatus.BAD_GATEWAY),
@@ -35,11 +39,4 @@ public enum CustomResponseCode {
         this.httpStatus = httpStatus;
     }
 
-    public String getCode() {
-        return code;
-    }
-
-    public HttpStatus getHttpStatus() {
-        return httpStatus;
-    }
 }
