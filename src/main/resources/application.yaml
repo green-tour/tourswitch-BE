@@ -1,6 +1,8 @@
 server:
   port: 8088
 spring:
+  config:
+    import: optional:file:.env[.properties]
   application:
     name: tourswitch
     version: v1
@@ -18,6 +20,8 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
+      # 스키마는 doc/투어스위치_DB설계.md 및 물리 DDL이 소유한다.
+      # Hibernate가 임의로 테이블을 생성/변경하지 않고 불일치만 검출한다.
       ddl-auto: validate
     open-in-view: false
     properties:
@@ -38,3 +42,32 @@ kakao:
 
 frontend:
   callback-uri: ${FRONTEND_CALLBACK_URI}
+
+# 한국관광공사 TourAPI
+# TOUR_API_SERVICE_KEY에는 공공데이터포털에서 받은 일반(Decoding) 인증키를 넣습니다.
+tour-api:
+  secret-key: ${TOUR_API_SERVICE_KEY:}
+  mobile-os: ETC
+  mobile-app: koreadata
+
+# 서울 열린데이터광장 실시간 인구 API
+seoul-open-api:
+  base-url: ${SEOUL_OPEN_API_BASE_URL:http://openapi.seoul.go.kr:8088}
+  secret-key: ${SEOUL_OPEN_API_KEY:}
+
+# 한지윤 담당 외부 데이터 적재 스케줄
+data-sync:
+  enabled: ${DATA_SYNC_ENABLED:true}
+  tourist-spots-cron: "${DATA_SYNC_TOURIST_SPOTS_CRON:0 10 3 * * *}"
+  crowd-forecasts-cron: "${DATA_SYNC_CROWD_FORECASTS_CRON:0 20 3 * * *}"
+  seoul-realtime-cron: "${DATA_SYNC_SEOUL_REALTIME_CRON:0 */30 * * * *}"
+  realtime-area-codes: "${SEOUL_REALTIME_AREA_CODES:POI001,POI002,POI003,POI004,POI005,POI006,POI007,POI008,POI009,POI010,POI011,POI012,POI013,POI014,POI015,POI016,POI017,POI018,POI019,POI020,POI021,POI023,POI024,POI025,POI026,POI027,POI029,POI030,POI031,POI032,POI033,POI034,POI035,POI036,POI037,POI038,POI039,POI040,POI041,POI042,POI043,POI044,POI045,POI046,POI047,POI048,POI049,POI050,POI051,POI052,POI053,POI054,POI055,POI056,POI058,POI059,POI060,POI061,POI063,POI064,POI066,POI067,POI068,POI070,POI071,POI072,POI073,POI074,POI076,POI077,POI078,POI079,POI080,POI081,POI082,POI083,POI084,POI085,POI086,POI087,POI088,POI089,POI090,POI091,POI092,POI093,POI094,POI095,POI096,POI098,POI100,POI101,POI102,POI103,POI104,POI105,POI106,POI107,POI108,POI109,POI110,POI111,POI112,POI114,POI115,POI116,POI117,POI118,POI119,POI120,POI121,POI122,POI123,POI124,POI125,POI126,POI127,POI128,POI129,POI130,POI131}"
+
+# Log
+logging:
+  file:
+    name: logs/error.log
+  level:
+    root: info
+    com.meerkatgramv2auth.domain: debug
+    com.meerkatgramv2auth.global: debug
