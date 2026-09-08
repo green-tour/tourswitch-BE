@@ -18,10 +18,9 @@ public class RecommendationConditionCounterQueryRepository {
         entityManager.createNativeQuery("""
                 INSERT INTO recommendation_condition_counter
                     (recommendation_condition_key, room_count, updated_at)
-                VALUES (:key, 1, NOW())
+                VALUES (:key, LAST_INSERT_ID(0) + 1, NOW())
                 ON DUPLICATE KEY UPDATE
-                    room_count = LAST_INSERT_ID(room_count),
-                    room_count = room_count + 1,
+                    room_count = LAST_INSERT_ID(room_count) + 1,
                     updated_at = NOW()
                 """)
                 .setParameter("key", conditionKey)
