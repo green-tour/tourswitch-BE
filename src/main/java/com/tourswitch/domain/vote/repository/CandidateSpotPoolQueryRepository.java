@@ -10,7 +10,6 @@ import org.springframework.stereotype.Repository;
 /**
  * tourist_spot/spot_keyword_link/spot_crowd_link/spot_crowd_forecast는 이 도메인이 소유하지 않는
  * 테이블이라 JPA 엔티티로 매핑하지 않고 네이티브 쿼리로 읽기 전용 조회만 한다(B1 규칙).
- * spot_keyword_link는 매칭 배치가 아직 실행되지 않아 현재는 빈 결과를 반환한다.
  */
 @Repository
 public class CandidateSpotPoolQueryRepository {
@@ -33,7 +32,13 @@ public class CandidateSpotPoolQueryRepository {
                 WHERE ts.region_id = :regionId
                   AND ts.is_active = TRUE
                   AND ts.content_type_id IN (:contentTypeIds)
+                  AND (ts.content_type_id <> 15
+                    OR :travelDate BETWEEN ts.event_start_date AND ts.event_end_date)
                   AND skl.keyword_id IN (:keywordIds)
+                  AND NOT EXISTS (
+                    SELECT 1 FROM spot_duplicate_link duplicate_link
+                    WHERE duplicate_link.tourist_spot_id = ts.id
+                  )
                 ORDER BY skl.keyword_id ASC
                 """)
                 .setParameter("regionId", regionId)
