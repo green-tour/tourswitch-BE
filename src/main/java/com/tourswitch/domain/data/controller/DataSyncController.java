@@ -1,12 +1,17 @@
 package com.tourswitch.domain.data.controller;
 
-import com.tourswitch.domain.data.service.ExternalDataSyncService;
 import com.tourswitch.domain.data.response.DataSyncResponseDTO;
+import com.tourswitch.domain.data.response.DataSyncStatusResponseDTO;
+import com.tourswitch.domain.data.response.DerivedDataSyncResponseDTO;
+import com.tourswitch.domain.data.service.DataSyncVerificationService;
+import com.tourswitch.domain.data.service.DerivedDataSyncService;
+import com.tourswitch.domain.data.service.ExternalDataSyncService;
 import com.tourswitch.global.response.GlobalRes;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -18,12 +23,21 @@ import org.springframework.web.bind.annotation.RestController;
 public class DataSyncController {
 
     private final ExternalDataSyncService service;
+    private final DerivedDataSyncService derivedDataSyncService;
+    private final DataSyncVerificationService verificationService;
 
     @Operation(summary = "관광지 데이터 적재")
     @PostMapping("/tourist-spots")
     public GlobalRes<DataSyncResponseDTO> touristSpots() {
         return GlobalRes.success(DataSyncResponseDTO.of(
                 "tourist_spot", service.syncTouristSpots()));
+    }
+
+    @Operation(summary = "관광지 소개 및 접근성 상세 적재")
+    @PostMapping("/tourist-details")
+    public GlobalRes<DataSyncResponseDTO> touristDetails() {
+        return GlobalRes.success(DataSyncResponseDTO.of(
+                "tourist_spot.overview/spot_accessibility", service.syncTouristDetails()));
     }
 
     @Operation(summary = "관광지 혼잡도 예측 데이터 적재")
@@ -38,5 +52,18 @@ public class DataSyncController {
     public GlobalRes<DataSyncResponseDTO> seoulRealtime() {
         return GlobalRes.success(DataSyncResponseDTO.of(
                 "seoul_realtime", service.syncSeoulRealtime()));
+    }
+
+    @Operation(summary = "링크 및 파생 데이터 전체 재생성")
+    @PostMapping("/derived-data")
+    public GlobalRes<DerivedDataSyncResponseDTO> derivedData() {
+        return GlobalRes.success(DerivedDataSyncResponseDTO.from(
+                derivedDataSyncService.synchronizeAll()));
+    }
+
+    @Operation(summary = "데이터 적재 완전성 점검")
+    @GetMapping("/status")
+    public GlobalRes<DataSyncStatusResponseDTO> status() {
+        return GlobalRes.success(verificationService.getStatus());
     }
 }
