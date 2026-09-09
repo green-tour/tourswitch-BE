@@ -9,8 +9,11 @@ import java.util.List;
 public record DataSyncProperties(
         boolean enabled,
         String touristSpotsCron,
+        String touristDetailsCron,
         String crowdForecastsCron,
         String seoulRealtimeCron,
+        String realtimeStatisticsCron,
+        String integrityCheckCron,
         String realtimeAreaCodes
 ) {
 
