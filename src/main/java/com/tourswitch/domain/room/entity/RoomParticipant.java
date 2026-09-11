@@ -27,10 +27,18 @@ public class RoomParticipant {
     private LocalDateTime joinedAt;
 
     public static RoomParticipant createHost(Long roomId, Long memberId) {
+        return create(roomId, memberId, true);
+    }
+
+    public static RoomParticipant createGuest(Long roomId, Long memberId) {
+        return create(roomId, memberId, false);
+    }
+
+    private static RoomParticipant create(Long roomId, Long memberId, boolean host) {
         RoomParticipant participant = new RoomParticipant();
         participant.travelRoomId = roomId;
         participant.memberId = memberId;
-        participant.host = true;
+        participant.host = host;
         participant.selectionCompleted = false;
         participant.joinedAt = LocalDateTime.now();
         return participant;
