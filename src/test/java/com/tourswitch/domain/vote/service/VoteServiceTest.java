@@ -43,7 +43,7 @@ class VoteServiceTest {
         Long travelRoomId = insertTestTravelRoom();
         insertTestParticipant(travelRoomId, memberId);
         Long candidateId = roomCandidateRepository.save(
-                RoomCandidate.create(travelRoomId, CONTENT_ID, null, 1, null, null, null, "동십자각",
+                RoomCandidate.create(travelRoomId, CONTENT_ID, null, 1, null, null, null, "동십자각", null,
                         37.5760791, 126.9794211)).getId();
 
         VoteTallyResponseDTO afterFirstSelect = voteService.selectCandidate(travelRoomId, candidateId, memberId);

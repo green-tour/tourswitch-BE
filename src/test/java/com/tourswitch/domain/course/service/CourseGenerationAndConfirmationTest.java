@@ -111,7 +111,7 @@ class CourseGenerationAndConfirmationTest {
 
     private Long createCandidate(Long travelRoomId, Spot spot, int displayOrder) {
         RoomCandidate candidate = RoomCandidate.create(travelRoomId, spot.contentId(), null, displayOrder, null,
-                null, null, spot.title(), spot.latitude(), spot.longitude());
+                null, null, spot.title(), null, spot.latitude(), spot.longitude());
         return roomCandidateRepository.save(candidate).getId();
     }
 
