@@ -1,5 +1,6 @@
 package com.tourswitch.domain.place.service;
 
+import com.tourswitch.domain.metadata.model.KeywordCode;
 import com.tourswitch.domain.place.exception.PlaceNotFoundException;
 import com.tourswitch.domain.place.exception.RegionNotFoundException;
 import com.tourswitch.domain.place.repository.PlaceKeywordClassificationQueryRepository;
@@ -98,7 +99,7 @@ public class PlaceSearchService {
         }
         List<String> classificationCodes = new java.util.ArrayList<>();
         for (String keywordCode : keywordCodes) {
-            String keywordName = PlaceCategoryCode.toKeywordName(keywordCode);
+            String keywordName = KeywordCode.toKeywordName(keywordCode);
             if (keywordName != null) {
                 classificationCodes.addAll(placeKeywordClassificationQueryRepository
                         .findClassificationLevel2CodesByKeywordName(keywordName));
