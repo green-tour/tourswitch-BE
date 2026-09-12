@@ -49,7 +49,7 @@ public class CourseConfirmationService {
         long participantCount = roomParticipantQueryRepository.countParticipants(course.getTravelRoomId());
         for (CourseSpot courseSpot : courseSpotRepository.findByCourseIdOrderByVisitOrderAsc(courseId)) {
             if (courseSpot.getSpotRole() == SpotRole.ATTRACTION) {
-                spotDailyDemandQueryRepository.increment(courseSpot.getTouristSpotId(), course.getTravelDate(),
+                spotDailyDemandQueryRepository.increment(courseSpot.getContentId(), course.getTravelDate(),
                         (int) participantCount);
             }
         }

@@ -26,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Rollback
 class VoteServiceTest {
 
-    private static final Long TOURIST_SPOT_ID = 11L;
+    private static final String CONTENT_ID = "1603677";
 
     @Autowired
     private VoteService voteService;
@@ -43,7 +43,8 @@ class VoteServiceTest {
         Long travelRoomId = insertTestTravelRoom();
         insertTestParticipant(travelRoomId, memberId);
         Long candidateId = roomCandidateRepository.save(
-                RoomCandidate.create(travelRoomId, TOURIST_SPOT_ID, null, 1, null, null, null)).getId();
+                RoomCandidate.create(travelRoomId, CONTENT_ID, null, 1, null, null, null, "동십자각",
+                        37.5760791, 126.9794211)).getId();
 
         VoteTallyResponseDTO afterFirstSelect = voteService.selectCandidate(travelRoomId, candidateId, memberId);
         assertThat(voteCountOf(afterFirstSelect, candidateId)).isEqualTo(1);

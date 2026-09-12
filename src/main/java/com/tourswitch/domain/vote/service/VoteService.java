@@ -102,7 +102,7 @@ public class VoteService {
                                 CandidateVoteCount::getVoteCount));
 
         List<CandidateTallyResponseDTO> candidateTallies = candidates.stream()
-                .map(candidate -> CandidateTallyResponseDTO.of(candidate.getId(), candidate.getTouristSpotId(),
+                .map(candidate -> CandidateTallyResponseDTO.of(candidate.getId(), candidate.getContentId(),
                         candidate.getDisplayOrder(), voteCountByCandidateId.getOrDefault(candidate.getId(), 0L)))
                 .toList();
 

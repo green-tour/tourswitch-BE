@@ -75,3 +75,12 @@ refresh-token:
 frontend:
   callback-uri: ${FRONTEND_CALLBACK_URI}
   origin: ${FRONTEND_ORIGIN}
+
+tourapi:
+  base-url: https://apis.data.go.kr/B551011
+  connect-timeout-ms: 3000
+  read-timeout-ms: 5000
+  kor-service:
+    service-key: ${TOUR_API_KEY_KORSERVICE}
+  tats-cnctr-rate:
+    service-key: ${TOUR_API_KEY}

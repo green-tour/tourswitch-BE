@@ -15,10 +15,10 @@ final class RouteOptimizer {
     private RouteOptimizer() {
     }
 
-    record Result(List<Long> orderedSpotIds, int totalDistanceMeters) {
+    record Result(List<String> orderedSpotIds, int totalDistanceMeters) {
     }
 
-    static Result findShortestPath(List<Long> spotIds, Map<Long, Map<Long, Integer>> distanceMatrix) {
+    static Result findShortestPath(List<String> spotIds, Map<String, Map<String, Integer>> distanceMatrix) {
         if (spotIds.size() <= 1) {
             return new Result(List.copyOf(spotIds), 0);
         }
@@ -28,8 +28,8 @@ final class RouteOptimizer {
         return new Result(best.order, best.totalDistance);
     }
 
-    private static void permute(List<Long> current, int fixedUntil, Map<Long, Map<Long, Integer>> distanceMatrix,
-                                 Best best) {
+    private static void permute(List<String> current, int fixedUntil,
+                                 Map<String, Map<String, Integer>> distanceMatrix, Best best) {
         if (fixedUntil == current.size() - 1) {
             int distance = totalDistance(current, distanceMatrix);
             if (distance < best.totalDistance) {
@@ -45,7 +45,7 @@ final class RouteOptimizer {
         }
     }
 
-    private static int totalDistance(List<Long> order, Map<Long, Map<Long, Integer>> distanceMatrix) {
+    private static int totalDistance(List<String> order, Map<String, Map<String, Integer>> distanceMatrix) {
         int total = 0;
         for (int i = 0; i < order.size() - 1; i++) {
             total += distanceMatrix.get(order.get(i)).get(order.get(i + 1));
@@ -53,14 +53,14 @@ final class RouteOptimizer {
         return total;
     }
 
-    private static void swap(List<Long> list, int i, int j) {
-        Long temp = list.get(i);
+    private static void swap(List<String> list, int i, int j) {
+        String temp = list.get(i);
         list.set(i, list.get(j));
         list.set(j, temp);
     }
 
     private static final class Best {
-        private List<Long> order;
+        private List<String> order;
         private int totalDistance = Integer.MAX_VALUE;
     }
 }
