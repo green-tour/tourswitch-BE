@@ -33,7 +33,9 @@ public class KorServiceClient {
         params.put("arrange", "C");
         params.put("contentTypeId", String.valueOf(contentTypeId));
         params.put("lDongRegnCd", legalDongRegionCode);
-        params.put("lDongSignguCd", legalDongDistrictCode);
+        if (legalDongDistrictCode != null) {
+            params.put("lDongSignguCd", legalDongDistrictCode);
+        }
         if (classificationLevel2Code != null) {
             params.put("lclsSystm2", classificationLevel2Code);
         }
