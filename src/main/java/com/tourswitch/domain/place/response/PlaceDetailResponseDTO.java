@@ -11,14 +11,13 @@ public record PlaceDetailResponseDTO(
         String address,
         double latitude,
         double longitude,
-        String concentrationGrade,
-        BigDecimal concentrationRate
+        PlaceCongestionResponseDTO congestion
 ) {
 
     public static PlaceDetailResponseDTO of(String contentId, String title, String regionName, String overview,
                                              String imageUrl, String address, double latitude, double longitude,
                                              String concentrationGrade, BigDecimal concentrationRate) {
         return new PlaceDetailResponseDTO(contentId, title, regionName, overview, imageUrl, address, latitude,
-                longitude, concentrationGrade, concentrationRate);
+                longitude, PlaceCongestionResponseDTO.of(concentrationGrade, concentrationRate));
     }
 }

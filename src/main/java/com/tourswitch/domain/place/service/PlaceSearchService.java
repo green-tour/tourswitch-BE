@@ -122,9 +122,10 @@ public class PlaceSearchService {
     private PlaceSummaryResponseDTO toSummary(TourApiSpotItem item, PlaceRegionRow region,
                                                Map<String, TourApiCongestionItem> congestionByName) {
         TourApiCongestionItem congestion = congestionByName.get(item.title());
-        String concentrationGrade = toGrade(congestion == null ? null : congestion.concentrationRate());
+        BigDecimal concentrationRate = congestion == null ? null : congestion.concentrationRate();
         return PlaceSummaryResponseDTO.of(item.contentId(), item.title(),
-                region == null ? null : region.districtName(), item.firstImageUrl(), concentrationGrade);
+                region == null ? null : region.districtName(), item.firstImageUrl(), toGrade(concentrationRate),
+                concentrationRate);
     }
 
     private String toGrade(BigDecimal concentrationRate) {

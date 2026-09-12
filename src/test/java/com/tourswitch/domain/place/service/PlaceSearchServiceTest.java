@@ -61,7 +61,7 @@ class PlaceSearchServiceTest {
 
         assertThat(result.items()).hasSize(1);
         assertThat(result.items().get(0).regionName()).isNull();
-        assertThat(result.items().get(0).concentrationGrade()).isNull();
+        assertThat(result.items().get(0).congestion().level()).isNull();
         verify(tatsCnctrRateClient, never()).tatsCnctrRatedList(any(), any());
     }
 
@@ -79,7 +79,7 @@ class PlaceSearchServiceTest {
 
         assertThat(result.items()).hasSize(1);
         assertThat(result.items().get(0).regionName()).isEqualTo("성동구");
-        assertThat(result.items().get(0).concentrationGrade()).isEqualTo("여유");
+        assertThat(result.items().get(0).congestion().level()).isEqualTo("여유");
     }
 
     @Test
@@ -155,7 +155,7 @@ class PlaceSearchServiceTest {
         var response = service.getDetail("1", 1L);
 
         assertThat(response.regionName()).isEqualTo("성동구");
-        assertThat(response.concentrationGrade()).isEqualTo("약간 붐빔");
-        assertThat(response.concentrationRate()).isEqualByComparingTo("60");
+        assertThat(response.congestion().level()).isEqualTo("약간 붐빔");
+        assertThat(response.congestion().rate()).isEqualByComparingTo("60");
     }
 }
