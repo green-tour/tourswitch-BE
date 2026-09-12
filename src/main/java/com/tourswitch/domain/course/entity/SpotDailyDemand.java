@@ -27,7 +27,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "spot_daily_demand", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_spot_daily_demand", columnNames = {"tourist_spot_id", "target_date"})
+        @UniqueConstraint(name = "uk_spot_daily_demand", columnNames = {"content_id", "target_date"})
 })
 public class SpotDailyDemand {
 
@@ -35,8 +35,8 @@ public class SpotDailyDemand {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "tourist_spot_id", nullable = false)
-    private Long touristSpotId;
+    @Column(name = "content_id", nullable = false, length = 50)
+    private String contentId;
 
     @Column(name = "target_date", nullable = false)
     private LocalDate targetDate;
@@ -51,14 +51,14 @@ public class SpotDailyDemand {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    private SpotDailyDemand(Long touristSpotId, LocalDate targetDate) {
-        this.touristSpotId = touristSpotId;
+    private SpotDailyDemand(String contentId, LocalDate targetDate) {
+        this.contentId = contentId;
         this.targetDate = targetDate;
         this.participantCount = 0;
         this.courseCount = 0;
     }
 
-    public static SpotDailyDemand create(Long touristSpotId, LocalDate targetDate) {
-        return new SpotDailyDemand(touristSpotId, targetDate);
+    public static SpotDailyDemand create(String contentId, LocalDate targetDate) {
+        return new SpotDailyDemand(contentId, targetDate);
     }
 }

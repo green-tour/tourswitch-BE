@@ -1,4 +1,4 @@
 package com.tourswitch.domain.course.repository;
 
-public record NearbySpotRow(Long touristSpotId, int distanceMeters) {
+public record NearbySpotRow(String contentId, int distanceMeters) {
 }

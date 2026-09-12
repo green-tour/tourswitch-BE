@@ -1,41 +1,29 @@
 package com.tourswitch.domain.course.repository;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
+import com.tourswitch.global.client.tourapi.KorServiceClient;
+import com.tourswitch.global.client.tourapi.TourApiSpotItem;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 /**
- * tourist_spot은 이 도메인이 소유하지 않는 테이블이라 네이티브 쿼리로 읽기 전용 조회만 한다(B1 규칙).
- * 부가 카테고리 후보(DB설계 8.3절): 기준 지점 반경 이내에서 거리순으로 상위 N개를 찾는다.
+ * 부가 카테고리 후보(DB설계 8.3절): 기준 지점 반경 이내에서 거리순으로 상위 N개를 TourAPI에서
+ * 실시간으로 찾는다(TourAPI 실시간전환 계획 문서 5.3절). locationBasedList2 응답이 이미 거리순
+ * 정렬(arrange=E)과 dist 필드를 함께 주므로 별도 거리 계산이 필요 없다.
  */
 @Repository
+@RequiredArgsConstructor
 public class NearbySpotQueryRepository {
 
-    @PersistenceContext
-    private EntityManager entityManager;
+    private final KorServiceClient korServiceClient;
 
-    @SuppressWarnings("unchecked")
-    public List<NearbySpotRow> findNearby(Long anchorTouristSpotId, int contentTypeId, double radiusMeters,
-                                           int limit) {
-        List<Object[]> rows = entityManager.createNativeQuery("""
-                SELECT ts.id, ST_Distance_Sphere(ts.location_point, anchor.location_point) AS distance
-                FROM tourist_spot ts, tourist_spot anchor
-                WHERE anchor.id = :anchorId
-                  AND ts.id != :anchorId
-                  AND ts.content_type_id = :contentTypeId
-                  AND ts.is_active = TRUE
-                  AND ST_Distance_Sphere(ts.location_point, anchor.location_point) <= :radiusMeters
-                ORDER BY distance ASC
-                """)
-                .setParameter("anchorId", anchorTouristSpotId)
-                .setParameter("contentTypeId", contentTypeId)
-                .setParameter("radiusMeters", radiusMeters)
-                .setMaxResults(limit)
-                .getResultList();
-
-        return rows.stream()
-                .map(row -> new NearbySpotRow(((Number) row[0]).longValue(), ((Number) row[1]).intValue()))
+    public List<NearbySpotRow> findNearby(double anchorLatitude, double anchorLongitude, int contentTypeId,
+                                           double radiusMeters, int limit) {
+        return korServiceClient.locationBasedList2(anchorLatitude, anchorLongitude, (int) radiusMeters, contentTypeId)
+                .stream()
+                .limit(limit)
+                .map(item -> new NearbySpotRow(item.contentId(),
+                        item.distanceMeters() == null ? 0 : item.distanceMeters().intValue()))
                 .toList();
     }
 }

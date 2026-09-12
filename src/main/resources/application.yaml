@@ -19,7 +19,7 @@ spring:
       include-message: always
 
   datasource:
-    url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
     username: ${DB_USER}
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -75,3 +75,12 @@ refresh-token:
 frontend:
   callback-uri: ${FRONTEND_CALLBACK_URI}
   origin: ${FRONTEND_ORIGIN}
+
+tourapi:
+  base-url: https://apis.data.go.kr/B551011
+  connect-timeout-ms: 3000
+  read-timeout-ms: 5000
+  kor-service:
+    service-key: ${TOUR_API_KEY_KORSERVICE}
+  tats-cnctr-rate:
+    service-key: ${TOUR_API_KEY}
