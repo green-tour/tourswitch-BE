@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -86,11 +88,15 @@ public class KorServiceClient {
 
     private java.net.URI buildUri(String path, Map<String, String> params) {
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(properties.baseUrl() + path)
-                .queryParam("serviceKey", properties.korService().serviceKey())
+                .queryParam("serviceKey", decodedServiceKey(properties.korService().serviceKey()))
                 .queryParam("MobileOS", MOBILE_OS)
                 .queryParam("MobileApp", MOBILE_APP)
                 .queryParam("_type", "json");
         params.forEach(builder::queryParam);
         return builder.encode().build().toUri();
+    }
+
+    private String decodedServiceKey(String serviceKey) {
+        return URLDecoder.decode(serviceKey, StandardCharsets.UTF_8);
     }
 }

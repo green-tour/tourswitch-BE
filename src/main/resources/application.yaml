@@ -81,6 +81,16 @@ tourapi:
   connect-timeout-ms: 3000
   read-timeout-ms: 5000
   kor-service:
-    service-key: ${TOUR_API_KEY_KORSERVICE}
+    service-key: ${TOUR_API_KEY_KORSERVICE:${TOUR_API_KEY}}
   tats-cnctr-rate:
     service-key: ${TOUR_API_KEY}
+
+seoul-open-api:
+  base-url: ${SEOUL_OPEN_API_BASE_URL:http://openapi.seoul.go.kr:8088}
+  service-name: citydata
+  service-key: ${SEOUL_OPEN_API_KEY}
+  connect-timeout-ms: 3000
+  read-timeout-ms: 5000
+  collection-enabled: ${SEOUL_CROWD_COLLECTION_ENABLED:true}
+  collection-initial-delay-ms: ${SEOUL_CROWD_COLLECTION_INITIAL_DELAY_MS:10000}
+  collection-delay-ms: ${SEOUL_CROWD_COLLECTION_DELAY_MS:600000}
