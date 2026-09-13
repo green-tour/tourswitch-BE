@@ -61,8 +61,8 @@ class CandidateCompositionServiceTest {
 
     private Long insertTestMember() {
         entityManager.createNativeQuery("""
-                INSERT INTO member (login_id, password_hash, nickname, status, created_at)
-                VALUES ('smoke_test_hongdaewoon', 'x', '스모크테스트', 'ACTIVE', NOW())
+                INSERT INTO member (social_provider, social_id, nickname, status, created_at)
+                VALUES ('KAKAO', 'smoke_test_hongdaewoon', '스모크테스트', 'ACTIVE', NOW())
                 """).executeUpdate();
         return ((Number) entityManager.createNativeQuery("SELECT LAST_INSERT_ID()").getSingleResult()).longValue();
     }

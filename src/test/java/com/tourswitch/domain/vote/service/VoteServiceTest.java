@@ -79,8 +79,8 @@ class VoteServiceTest {
 
     private Long insertTestMember() {
         entityManager.createNativeQuery("""
-                INSERT INTO member (login_id, password_hash, nickname, status, created_at)
-                VALUES ('smoke_test_vote_member', 'x', '투표테스트', 'ACTIVE', NOW())
+                INSERT INTO member (social_provider, social_id, nickname, status, created_at)
+                VALUES ('KAKAO', 'smoke_test_vote_member', '투표테스트', 'ACTIVE', NOW())
                 """).executeUpdate();
         return ((Number) entityManager.createNativeQuery("SELECT LAST_INSERT_ID()").getSingleResult()).longValue();
     }
@@ -93,7 +93,7 @@ class VoteServiceTest {
                      recommendation_condition_key, candidate_offset, created_at)
                 SELECT 'smoke_test_vote_invite_token', id, 'STAGE4_SMOKE_TEST', :travelDate, 1, 3,
                        FALSE, FALSE, FALSE, 'VOTING', REPEAT('1', 64), 0, NOW()
-                FROM member WHERE login_id = 'smoke_test_vote_member'
+                FROM member WHERE social_id = 'smoke_test_vote_member'
                 """)
                 .setParameter("travelDate", LocalDate.of(2026, 7, 28))
                 .executeUpdate();
