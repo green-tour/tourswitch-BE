@@ -29,4 +29,12 @@ public enum KeywordCode {
                 .orElseThrow(() -> new IllegalStateException("지원하지 않는 키워드입니다: " + keywordName))
                 .name();
     }
+
+    public static String toKeywordName(String code) {
+        try {
+            return valueOf(code).keywordName;
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
 }
