@@ -81,7 +81,7 @@ tourapi:
   connect-timeout-ms: 3000
   read-timeout-ms: 5000
   kor-service:
-    service-key: ${TOUR_API_KEY_KORSERVICE:${TOUR_API_KEY}}
+    service-key: ${TOUR_API_KEY}
   tats-cnctr-rate:
     service-key: ${TOUR_API_KEY}
 

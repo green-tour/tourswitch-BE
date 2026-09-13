@@ -11,7 +11,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 /**
  * 실제 TourAPI를 호출해 클라이언트의 응답 파싱이 맞는지 확인한다(계획 문서 10절 1단계).
  * 대부분의 테스트와 달리 외부 API를 목킹하지 않는다 - 응답 스키마 자체를 검증하는 게 목적이다.
- * TOUR_API_KEY_KORSERVICE/TOUR_API_KEY 환경변수가 필요하다.
+ * TOUR_API_KEY 환경변수가 필요하다.
  */
 @SpringBootTest
 class KorServiceClientTest {
