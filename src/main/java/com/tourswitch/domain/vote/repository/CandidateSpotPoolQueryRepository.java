@@ -69,8 +69,8 @@ public class CandidateSpotPoolQueryRepository {
         TourApiCongestionItem congestion = congestionByName.get(item.title());
         BigDecimal concentrationRate = congestion == null ? null : congestion.concentrationRate();
         String concentrationGrade = toGrade(concentrationRate);
-        return new CandidateSpotRow(item.contentId(), item.title(), item.latitude(), item.longitude(), keywordId,
-                concentrationRate, concentrationGrade);
+        return new CandidateSpotRow(item.contentId(), item.title(), item.firstImageUrl(), item.latitude(),
+                item.longitude(), keywordId, concentrationRate, concentrationGrade);
     }
 
     private String toGrade(BigDecimal concentrationRate) {

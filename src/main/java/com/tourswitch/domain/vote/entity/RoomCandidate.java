@@ -61,6 +61,9 @@ public class RoomCandidate {
     @Column(name = "title_snapshot", nullable = false, length = 200)
     private String titleSnapshot;
 
+    @Column(name = "image_url_snapshot", length = 500)
+    private String imageUrlSnapshot;
+
     @Column(name = "latitude_snapshot", nullable = false)
     private Double latitudeSnapshot;
 
@@ -73,8 +76,8 @@ public class RoomCandidate {
 
     private RoomCandidate(Long travelRoomId, String contentId, Long keywordId, Integer displayOrder,
                            BigDecimal recommendationScore, BigDecimal concentrationRateSnapshot,
-                           String concentrationGradeSnapshot, String titleSnapshot, Double latitudeSnapshot,
-                           Double longitudeSnapshot) {
+                           String concentrationGradeSnapshot, String titleSnapshot, String imageUrlSnapshot,
+                           Double latitudeSnapshot, Double longitudeSnapshot) {
         this.travelRoomId = travelRoomId;
         this.contentId = contentId;
         this.keywordId = keywordId;
@@ -83,6 +86,7 @@ public class RoomCandidate {
         this.concentrationRateSnapshot = concentrationRateSnapshot;
         this.concentrationGradeSnapshot = concentrationGradeSnapshot;
         this.titleSnapshot = titleSnapshot;
+        this.imageUrlSnapshot = imageUrlSnapshot;
         this.latitudeSnapshot = latitudeSnapshot;
         this.longitudeSnapshot = longitudeSnapshot;
     }
@@ -90,9 +94,9 @@ public class RoomCandidate {
     public static RoomCandidate create(Long travelRoomId, String contentId, Long keywordId, Integer displayOrder,
                                         BigDecimal recommendationScore, BigDecimal concentrationRateSnapshot,
                                         String concentrationGradeSnapshot, String titleSnapshot,
-                                        Double latitudeSnapshot, Double longitudeSnapshot) {
+                                        String imageUrlSnapshot, Double latitudeSnapshot, Double longitudeSnapshot) {
         return new RoomCandidate(travelRoomId, contentId, keywordId, displayOrder, recommendationScore,
-                concentrationRateSnapshot, concentrationGradeSnapshot, titleSnapshot, latitudeSnapshot,
-                longitudeSnapshot);
+                concentrationRateSnapshot, concentrationGradeSnapshot, titleSnapshot, imageUrlSnapshot,
+                latitudeSnapshot, longitudeSnapshot);
     }
 }

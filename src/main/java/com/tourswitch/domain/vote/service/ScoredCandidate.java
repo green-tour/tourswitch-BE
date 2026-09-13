@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 public record ScoredCandidate(
         String contentId,
         String title,
+        String imageUrl,
         double latitude,
         double longitude,
         Long keywordId,
