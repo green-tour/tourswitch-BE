@@ -48,11 +48,11 @@ public class CourseReplacement {
     @Column(name = "administrative_dong_id", nullable = false)
     private Long administrativeDongId;
 
-    @Column(name = "previous_tourist_spot_id", nullable = false)
-    private Long previousTouristSpotId;
+    @Column(name = "previous_content_id", nullable = false, length = 50)
+    private String previousContentId;
 
-    @Column(name = "replacement_tourist_spot_id", nullable = false)
-    private Long replacementTouristSpotId;
+    @Column(name = "replacement_content_id", nullable = false, length = 50)
+    private String replacementContentId;
 
     @Column(name = "replaced_by_member_id", nullable = false)
     private Long replacedByMemberId;
@@ -65,24 +65,24 @@ public class CourseReplacement {
     private LocalDateTime replacedAt;
 
     private CourseReplacement(Long courseId, Long courseSpotId, Long administrativeDongId,
-                              Long previousTouristSpotId, Long replacementTouristSpotId,
+                              String previousContentId, String replacementContentId,
                               Long replacedByMemberId) {
-        if (previousTouristSpotId.equals(replacementTouristSpotId)) {
+        if (previousContentId.equals(replacementContentId)) {
             throw new IllegalArgumentException("기존 장소와 대체 장소는 달라야 합니다.");
         }
         this.courseId = courseId;
         this.courseSpotId = courseSpotId;
         this.administrativeDongId = administrativeDongId;
-        this.previousTouristSpotId = previousTouristSpotId;
-        this.replacementTouristSpotId = replacementTouristSpotId;
+        this.previousContentId = previousContentId;
+        this.replacementContentId = replacementContentId;
         this.replacedByMemberId = replacedByMemberId;
         this.radiusMeters = SEARCH_RADIUS_METERS;
     }
 
     public static CourseReplacement create(Long courseId, Long courseSpotId, Long administrativeDongId,
-                                           Long previousTouristSpotId, Long replacementTouristSpotId,
+                                           String previousContentId, String replacementContentId,
                                            Long replacedByMemberId) {
-        return new CourseReplacement(courseId, courseSpotId, administrativeDongId, previousTouristSpotId,
-                replacementTouristSpotId, replacedByMemberId);
+        return new CourseReplacement(courseId, courseSpotId, administrativeDongId, previousContentId,
+                replacementContentId, replacedByMemberId);
     }
 }

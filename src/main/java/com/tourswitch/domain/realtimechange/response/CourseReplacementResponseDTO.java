@@ -8,8 +8,8 @@ public record CourseReplacementResponseDTO(
         Long courseId,
         Long courseSpotId,
         Long administrativeDongId,
-        Long previousTouristSpotId,
-        Long replacementTouristSpotId,
+        String previousContentId,
+        String replacementContentId,
         int radiusMeters,
         LocalDateTime replacedAt
 ) {
@@ -20,8 +20,8 @@ public record CourseReplacementResponseDTO(
                 replacement.getCourseId(),
                 replacement.getCourseSpotId(),
                 replacement.getAdministrativeDongId(),
-                replacement.getPreviousTouristSpotId(),
-                replacement.getReplacementTouristSpotId(),
+                replacement.getPreviousContentId(),
+                replacement.getReplacementContentId(),
                 replacement.getRadiusMeters(),
                 replacement.getReplacedAt());
     }

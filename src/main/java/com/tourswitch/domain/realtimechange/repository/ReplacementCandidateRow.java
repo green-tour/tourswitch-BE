@@ -8,9 +8,10 @@ import java.util.List;
  * 후보는 요청 시점마다 계산하므로 별도 엔티티로 저장하지 않는다.
  */
 public record ReplacementCandidateRow(
-        Long touristSpotId,
+        String contentId,
         String title,
         String address,
+        String imageUrl,
         int distanceMeters,
         List<String> matchedKeywords,
         String crowdGrade,

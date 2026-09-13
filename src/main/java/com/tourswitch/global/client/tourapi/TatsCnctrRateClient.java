@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -55,11 +57,15 @@ public class TatsCnctrRateClient {
 
     private java.net.URI buildUri(String path, Map<String, String> params) {
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(properties.baseUrl() + path)
-                .queryParam("serviceKey", properties.tatsCnctrRate().serviceKey())
+                .queryParam("serviceKey", decodedServiceKey(properties.tatsCnctrRate().serviceKey()))
                 .queryParam("MobileOS", MOBILE_OS)
                 .queryParam("MobileApp", MOBILE_APP)
                 .queryParam("_type", "json");
         params.forEach(builder::queryParam);
         return builder.encode().build().toUri();
+    }
+
+    private String decodedServiceKey(String serviceKey) {
+        return URLDecoder.decode(serviceKey, StandardCharsets.UTF_8);
     }
 }

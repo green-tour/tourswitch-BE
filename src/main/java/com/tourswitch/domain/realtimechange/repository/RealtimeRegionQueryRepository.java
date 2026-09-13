@@ -6,7 +6,7 @@ import java.util.List;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class RegionQueryRepository {
+public class RealtimeRegionQueryRepository {
 
     @PersistenceContext
     private EntityManager entityManager;

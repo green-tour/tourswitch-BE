@@ -61,9 +61,9 @@ class RealtimeChangeIntegrationTest {
         course.confirm();
         courseRepository.save(course);
 
-        Long originalSpotId = findOriginalSpotId();
-        String originalTitle = findSpotTitle(originalSpotId);
-        CourseSpot courseSpot = CourseSpot.create(course, originalSpotId, SpotRole.ATTRACTION, 1,
+        String originalContentId = "test-original-content-id";
+        String originalTitle = "기존 테스트 장소";
+        CourseSpot courseSpot = CourseSpot.create(course, originalContentId, SpotRole.ATTRACTION, 1,
                 originalTitle, BigDecimal.ZERO, 1);
         courseSpotRepository.save(courseSpot);
         entityManager.flush();
@@ -77,7 +77,7 @@ class RealtimeChangeIntegrationTest {
         assertThat(response.candidates()).allSatisfy(candidate -> {
             assertThat(candidate.distanceMeters()).isLessThanOrEqualTo(3_000);
             assertThat(candidate.matchedKeywords()).contains("전시·박물관");
-            assertThat(candidate.touristSpotId()).isNotEqualTo(originalSpotId);
+            assertThat(candidate.contentId()).isNotEqualTo(originalContentId);
         });
 
         ReplacementCandidateResponseDTO selected = response.candidates().getFirst();
@@ -85,14 +85,14 @@ class RealtimeChangeIntegrationTest {
                 course.getId(),
                 courseSpot.getId(),
                 memberId,
-                new CourseSpotReplacementRequestDTO(CHEONGUN_HYOJA_DONG_ID, selected.touristSpotId()));
+                new CourseSpotReplacementRequestDTO(CHEONGUN_HYOJA_DONG_ID, selected.contentId()));
 
         entityManager.flush();
         entityManager.clear();
 
         CourseSpot replacedSpot = courseSpotRepository.findById(courseSpot.getId()).orElseThrow();
-        assertThat(replacedSpot.getTouristSpotId()).isEqualTo(selected.touristSpotId());
-        assertThat(replacedSpot.getReplacedFromSpotId()).isEqualTo(originalSpotId);
+        assertThat(replacedSpot.getContentId()).isEqualTo(selected.contentId());
+        assertThat(replacedSpot.getReplacedFromSpotId()).isEqualTo(originalContentId);
         assertThat(replacedSpot.getIsReplaced()).isTrue();
         assertThat(replacedSpot.getVoteCountSnapshot()).isNull();
         assertThat(replacement.radiusMeters()).isEqualTo(3_000);
@@ -142,21 +142,6 @@ class RealtimeChangeIntegrationTest {
                 .setParameter("travelRoomId", travelRoomId)
                 .setParameter("keywordId", keywordId)
                 .executeUpdate();
-    }
-
-    private Long findOriginalSpotId() {
-        return ((Number) entityManager.createNativeQuery("""
-                SELECT id FROM tourist_spot
-                WHERE is_active = TRUE AND is_coordinate_valid = TRUE
-                  AND content_type_id IN (12, 14, 15, 28)
-                ORDER BY id LIMIT 1
-                """).getSingleResult()).longValue();
-    }
-
-    private String findSpotTitle(Long touristSpotId) {
-        return (String) entityManager.createNativeQuery("SELECT title FROM tourist_spot WHERE id = :id")
-                .setParameter("id", touristSpotId)
-                .getSingleResult();
     }
 
     private Long lastInsertId() {

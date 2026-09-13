@@ -1,127 +1,151 @@
 package com.tourswitch.domain.realtimechange.repository;
 
+import com.tourswitch.domain.course.entity.Course;
+import com.tourswitch.domain.course.repository.CourseSpotRepository;
+import com.tourswitch.domain.realtimechange.entity.AdministrativeDong;
+import com.tourswitch.domain.vote.repository.KeywordClassificationQueryRepository;
+import com.tourswitch.domain.vote.repository.RegionQueryRepository;
+import com.tourswitch.domain.vote.repository.RegionRow;
+import com.tourswitch.global.client.tourapi.KorServiceClient;
+import com.tourswitch.global.client.tourapi.TatsCnctrRateClient;
+import com.tourswitch.global.client.tourapi.TourApiCongestionItem;
+import com.tourswitch.global.client.tourapi.TourApiSpotItem;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import java.time.LocalDateTime;
-import java.util.Arrays;
+import java.math.BigDecimal;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
-/**
- * 선택 행정동 대표 좌표 기준 3km 이내에서 여행방 키워드 합집합과 일치하는 관광지를 조회한다.
- * 실시간 혼잡도는 원본 관측 시각이 60분 이내인 최신 스냅샷만 사용한다.
- */
+/** 선택 행정동의 대표 좌표 기준 3km 후보를 TourAPI에서 실시간 조회한다. */
 @Repository
+@RequiredArgsConstructor
+@Slf4j
 public class ReplacementCandidateQueryRepository {
 
+    private static final int SEARCH_RADIUS_METERS = 3_000;
     private static final List<Integer> ATTRACTION_CONTENT_TYPE_IDS = List.of(12, 14, 15, 28);
+    private static final DateTimeFormatter BASE_YMD_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd");
+
+    private final KorServiceClient korServiceClient;
+    private final TatsCnctrRateClient tatsCnctrRateClient;
+    private final RegionQueryRepository regionQueryRepository;
+    private final KeywordClassificationQueryRepository keywordClassificationQueryRepository;
+    private final CourseSpotRepository courseSpotRepository;
+    private final SeoulRealtimeCrowdQueryRepository seoulRealtimeCrowdQueryRepository;
 
     @PersistenceContext
     private EntityManager entityManager;
 
-    public List<ReplacementCandidateRow> findCandidates(Long courseId, Long administrativeDongId, int limit) {
-        return executeCandidateQuery(courseId, administrativeDongId, null, limit);
+    public List<ReplacementCandidateRow> findCandidates(Course course, AdministrativeDong dong, int limit) {
+        Map<String, List<String>> keywordNamesByClassification = findKeywordNamesByClassification(
+                course.getTravelRoomId());
+        if (keywordNamesByClassification.isEmpty()) {
+            return List.of();
+        }
+        Set<String> existingContentIds = new HashSet<>(courseSpotRepository
+                .findByCourseIdOrderByVisitOrderAsc(course.getId()).stream()
+                .map(spot -> spot.getContentId()).toList());
+        Map<String, TourApiCongestionItem> congestionByName = fetchCongestionByName(
+                dong.getRegionId(), course.getTravelDate().format(BASE_YMD_FORMAT));
+
+        Map<String, ReplacementCandidateRow> candidatesByContentId = new LinkedHashMap<>();
+        for (int contentTypeId : ATTRACTION_CONTENT_TYPE_IDS) {
+            for (TourApiSpotItem spot : korServiceClient.locationBasedList2(
+                    dong.getCenterLatitude().doubleValue(), dong.getCenterLongitude().doubleValue(),
+                    SEARCH_RADIUS_METERS, contentTypeId)) {
+                List<String> matchedKeywords = keywordNamesByClassification.get(spot.classificationLevel2Code());
+                if (matchedKeywords == null || existingContentIds.contains(spot.contentId())) {
+                    continue;
+                }
+                TourApiCongestionItem congestion = congestionByName.get(spot.title());
+                Optional<SeoulRealtimeCrowdRow> seoulCrowd = seoulRealtimeCrowdQueryRepository.findLatest(
+                        spot.latitude(), spot.longitude());
+                candidatesByContentId.putIfAbsent(spot.contentId(), new ReplacementCandidateRow(
+                        spot.contentId(), spot.title(), spot.address(), spot.firstImageUrl(), distanceOf(spot), matchedKeywords,
+                        seoulCrowd.map(SeoulRealtimeCrowdRow::congestionLevel)
+                                .orElseGet(() -> congestion == null ? null : toGrade(congestion.concentrationRate())),
+                        seoulCrowd.map(SeoulRealtimeCrowdRow::observedAt).orElse(null)));
+            }
+        }
+        return candidatesByContentId.values().stream()
+                .sorted(Comparator.comparingInt(this::crowdRank)
+                        .thenComparing(Comparator.comparingInt(
+                                (ReplacementCandidateRow row) -> row.matchedKeywords().size()).reversed())
+                        .thenComparingInt(ReplacementCandidateRow::distanceMeters)
+                        .thenComparing(ReplacementCandidateRow::contentId))
+                .limit(limit).toList();
     }
 
-    public Optional<ReplacementCandidateRow> findEligibleCandidate(Long courseId, Long administrativeDongId,
-                                                                    Long touristSpotId) {
-        return executeCandidateQuery(courseId, administrativeDongId, touristSpotId, 1).stream().findFirst();
+    public Optional<ReplacementCandidateRow> findEligibleCandidate(Course course, AdministrativeDong dong,
+                                                                    String contentId) {
+        return findCandidates(course, dong, 50).stream()
+                .filter(candidate -> candidate.contentId().equals(contentId)).findFirst();
     }
 
     @SuppressWarnings("unchecked")
-    private List<ReplacementCandidateRow> executeCandidateQuery(Long courseId, Long administrativeDongId,
-                                                                 Long touristSpotId, int limit) {
-        String spotFilter = touristSpotId == null ? "" : " AND ts.id = :touristSpotId ";
-        String sql = """
-                SELECT ts.id,
-                       ts.title,
-                       ts.address,
-                       CAST(ST_Distance_Sphere(
-                           ts.location_point,
-                           ST_SRID(POINT(ad.center_longitude, ad.center_latitude), 4326)
-                       ) AS SIGNED) AS distance_meters,
-                       GROUP_CONCAT(DISTINCT k.keyword_name ORDER BY k.display_order SEPARATOR '||') AS keywords,
-                       population.congestion_level,
-                       population.observed_at,
-                       COALESCE(demand.participant_count, 0) AS participant_count,
-                       COUNT(DISTINCT rk.keyword_id) AS matched_keyword_count
-                FROM course c
-                JOIN travel_room tr ON tr.id = c.travel_room_id
-                JOIN administrative_dong ad ON ad.id = :administrativeDongId AND ad.is_active = TRUE
-                JOIN room_keyword rk ON rk.travel_room_id = tr.id
-                JOIN spot_keyword_link skl ON skl.keyword_id = rk.keyword_id
+    private Map<String, List<String>> findKeywordNamesByClassification(Long travelRoomId) {
+        List<Object[]> keywords = entityManager.createNativeQuery("""
+                SELECT k.id, k.keyword_name
+                FROM room_keyword rk
                 JOIN keyword k ON k.id = rk.keyword_id AND k.is_active = TRUE
-                JOIN tourist_spot ts ON ts.id = skl.tourist_spot_id
-                LEFT JOIN spot_area_link sal
-                       ON sal.tourist_spot_id = ts.id AND sal.is_primary = TRUE
-                LEFT JOIN seoul_realtime_population population
-                       ON population.id = (
-                           SELECT latest.id
-                           FROM seoul_realtime_population latest
-                           WHERE latest.seoul_realtime_area_id = sal.seoul_realtime_area_id
-                             AND latest.observed_at >= NOW() - INTERVAL 60 MINUTE
-                           ORDER BY latest.observed_at DESC, latest.id DESC
-                           LIMIT 1
-                       )
-                LEFT JOIN spot_daily_demand demand
-                       ON demand.tourist_spot_id = ts.id AND demand.target_date = c.travel_date
-                WHERE c.id = :courseId
-                  AND ts.is_active = TRUE
-                  AND ts.is_coordinate_valid = TRUE
-                  AND ts.content_type_id IN (:contentTypeIds)
-                  AND NOT EXISTS (
-                      SELECT 1 FROM course_spot existing
-                      WHERE existing.course_id = c.id AND existing.tourist_spot_id = ts.id
-                  )
-                  AND NOT EXISTS (
-                      SELECT 1 FROM spot_duplicate_link duplicate
-                      WHERE duplicate.tourist_spot_id = ts.id
-                  )
-                """ + spotFilter + """
-                GROUP BY ts.id, ts.title, ts.address, ts.location_point,
-                         population.congestion_level, population.observed_at,
-                         demand.participant_count, ad.center_longitude, ad.center_latitude
-                HAVING distance_meters <= 3000
-                ORDER BY
-                    CASE population.congestion_level
-                        WHEN '여유' THEN 1
-                        WHEN '보통' THEN 2
-                        WHEN '약간 붐빔' THEN 3
-                        WHEN '붐빔' THEN 4
-                        ELSE 5
-                    END ASC,
-                    participant_count ASC,
-                    matched_keyword_count DESC,
-                    distance_meters ASC,
-                    ts.id ASC
-                """;
-
-        var query = entityManager.createNativeQuery(sql)
-                .setParameter("courseId", courseId)
-                .setParameter("administrativeDongId", administrativeDongId)
-                .setParameter("contentTypeIds", ATTRACTION_CONTENT_TYPE_IDS)
-                .setMaxResults(limit);
-        if (touristSpotId != null) {
-            query.setParameter("touristSpotId", touristSpotId);
+                WHERE rk.travel_room_id = :travelRoomId
+                ORDER BY k.display_order, k.id
+                """).setParameter("travelRoomId", travelRoomId).getResultList();
+        Map<String, List<String>> result = new HashMap<>();
+        for (Object[] keyword : keywords) {
+            Long keywordId = ((Number) keyword[0]).longValue();
+            String keywordName = (String) keyword[1];
+            for (String code : keywordClassificationQueryRepository
+                    .findClassificationLevel2CodesByKeywordId(keywordId)) {
+                result.computeIfAbsent(code, ignored -> new ArrayList<>()).add(keywordName);
+            }
         }
-
-        List<Object[]> rows = query.getResultList();
-        return rows.stream().map(this::toRow).toList();
+        result.replaceAll((code, names) -> List.copyOf(names));
+        return result;
     }
 
-    private ReplacementCandidateRow toRow(Object[] row) {
-        String keywordText = (String) row[4];
-        List<String> keywords = keywordText == null || keywordText.isBlank()
-                ? List.of()
-                : Arrays.asList(keywordText.split("\\|\\|"));
-        return new ReplacementCandidateRow(
-                ((Number) row[0]).longValue(),
-                (String) row[1],
-                (String) row[2],
-                ((Number) row[3]).intValue(),
-                keywords,
-                (String) row[5],
-                (LocalDateTime) row[6]);
+    private Map<String, TourApiCongestionItem> fetchCongestionByName(Long regionId, String targetBaseYmd) {
+        RegionRow region = regionQueryRepository.findById(regionId)
+                .orElseThrow(() -> new IllegalStateException("존재하지 않는 지역입니다: " + regionId));
+        Map<String, TourApiCongestionItem> result = new HashMap<>();
+        try {
+            for (TourApiCongestionItem item : tatsCnctrRateClient.tatsCnctrRatedList(
+                    region.legalDongAreaCode(), region.districtCode())) {
+                if (targetBaseYmd.equals(item.baseYmd())) result.put(item.touristSpotName(), item);
+            }
+        } catch (RuntimeException exception) {
+            // 집중률은 보조 점수다. 장애 시 후보 조회 자체를 중단하지 않고 키워드·거리로 추천한다.
+            log.warn("관광지 집중률 조회에 실패해 혼잡도 없이 대체 후보를 구성합니다. regionId={}", regionId,
+                    exception);
+        }
+        return result;
+    }
+
+    private int distanceOf(TourApiSpotItem spot) {
+        return spot.distanceMeters() == null ? Integer.MAX_VALUE : (int) Math.round(spot.distanceMeters());
+    }
+
+    private int crowdRank(ReplacementCandidateRow row) {
+        return switch (row.crowdGrade() == null ? "" : row.crowdGrade()) {
+            case "여유" -> 1; case "보통" -> 2; case "약간 붐빔" -> 3; case "붐빔" -> 4; default -> 5;
+        };
+    }
+
+    private String toGrade(BigDecimal rate) {
+        if (rate.doubleValue() < 25) return "여유";
+        if (rate.doubleValue() < 50) return "보통";
+        if (rate.doubleValue() < 75) return "약간 붐빔";
+        return "붐빔";
     }
 }

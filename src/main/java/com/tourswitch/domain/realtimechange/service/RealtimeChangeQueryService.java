@@ -8,7 +8,7 @@ import com.tourswitch.domain.realtimechange.exception.RealtimeChangeAccessDenied
 import com.tourswitch.domain.realtimechange.exception.RealtimeChangeConflictException;
 import com.tourswitch.domain.realtimechange.exception.RealtimeChangeNotFoundException;
 import com.tourswitch.domain.realtimechange.repository.AdministrativeDongRepository;
-import com.tourswitch.domain.realtimechange.repository.RegionQueryRepository;
+import com.tourswitch.domain.realtimechange.repository.RealtimeRegionQueryRepository;
 import com.tourswitch.domain.realtimechange.repository.ReplacementCandidateQueryRepository;
 import com.tourswitch.domain.realtimechange.response.AdministrativeDongResponseDTO;
 import com.tourswitch.domain.realtimechange.response.RegionResponseDTO;
@@ -28,7 +28,7 @@ public class RealtimeChangeQueryService {
 
     private static final ZoneId SEOUL_ZONE_ID = ZoneId.of("Asia/Seoul");
 
-    private final RegionQueryRepository regionQueryRepository;
+    private final RealtimeRegionQueryRepository regionQueryRepository;
     private final AdministrativeDongRepository administrativeDongRepository;
     private final CourseRepository courseRepository;
     private final RoomParticipantQueryRepository roomParticipantQueryRepository;
@@ -58,7 +58,7 @@ public class RealtimeChangeQueryService {
                 .orElseThrow(() -> new RealtimeChangeNotFoundException("존재하지 않거나 비활성화된 행정동입니다."));
         return ReplacementCandidatesResponseDTO.of(
                 dong,
-                replacementCandidateQueryRepository.findCandidates(courseId, administrativeDongId, limit));
+                replacementCandidateQueryRepository.findCandidates(course, dong, limit));
     }
 
     private void validateParticipant(Course course, Long memberId) {

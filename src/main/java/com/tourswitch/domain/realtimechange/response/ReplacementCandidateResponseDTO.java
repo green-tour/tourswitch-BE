@@ -5,9 +5,10 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public record ReplacementCandidateResponseDTO(
-        Long touristSpotId,
+        String contentId,
         String title,
         String address,
+        String imageUrl,
         int distanceMeters,
         List<String> matchedKeywords,
         String crowdGrade,
@@ -16,9 +17,10 @@ public record ReplacementCandidateResponseDTO(
 
     public static ReplacementCandidateResponseDTO from(ReplacementCandidateRow candidate) {
         return new ReplacementCandidateResponseDTO(
-                candidate.touristSpotId(),
+                candidate.contentId(),
                 candidate.title(),
                 candidate.address(),
+                candidate.imageUrl(),
                 candidate.distanceMeters(),
                 candidate.matchedKeywords(),
                 candidate.crowdGrade(),

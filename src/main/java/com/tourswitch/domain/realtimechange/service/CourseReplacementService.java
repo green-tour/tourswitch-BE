@@ -61,19 +61,19 @@ public class CourseReplacementService {
                         request.administrativeDongId())
                 .orElseThrow(() -> new RealtimeChangeNotFoundException("존재하지 않거나 비활성화된 행정동입니다."));
         ReplacementCandidateRow candidate = replacementCandidateQueryRepository.findEligibleCandidate(
-                        courseId, dong.getId(), request.replacementTouristSpotId())
+                        course, dong, request.replacementContentId())
                 .orElseThrow(() -> new InvalidReplacementRequestException(
                         "선택한 장소가 3km·여행방 키워드 조건을 만족하지 않습니다."));
 
-        Long previousTouristSpotId = courseSpot.getTouristSpotId();
-        courseSpot.replaceWith(candidate.touristSpotId(), candidate.title(), LocalDateTime.now(SEOUL_ZONE_ID));
+        String previousContentId = courseSpot.getContentId();
+        courseSpot.replaceWith(candidate.contentId(), candidate.title(), LocalDateTime.now(SEOUL_ZONE_ID));
 
         CourseReplacement replacement = CourseReplacement.create(
                 courseId,
                 courseSpotId,
                 dong.getId(),
-                previousTouristSpotId,
-                candidate.touristSpotId(),
+                previousContentId,
+                candidate.contentId(),
                 memberId);
         return CourseReplacementResponseDTO.from(courseReplacementRepository.saveAndFlush(replacement));
     }
