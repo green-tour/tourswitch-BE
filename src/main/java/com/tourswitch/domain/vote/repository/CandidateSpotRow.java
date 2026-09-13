@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 public record CandidateSpotRow(
         String contentId,
         String title,
+        String imageUrl,
         double latitude,
         double longitude,
         Long keywordId,

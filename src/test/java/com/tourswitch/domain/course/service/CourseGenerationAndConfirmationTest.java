@@ -111,7 +111,7 @@ class CourseGenerationAndConfirmationTest {
 
     private Long createCandidate(Long travelRoomId, Spot spot, int displayOrder) {
         RoomCandidate candidate = RoomCandidate.create(travelRoomId, spot.contentId(), null, displayOrder, null,
-                null, null, spot.title(), spot.latitude(), spot.longitude());
+                null, null, spot.title(), null, spot.latitude(), spot.longitude());
         return roomCandidateRepository.save(candidate).getId();
     }
 
@@ -132,12 +132,12 @@ class CourseGenerationAndConfirmationTest {
         return count.intValue();
     }
 
-    private Long insertMember(String loginId) {
+    private Long insertMember(String socialId) {
         entityManager.createNativeQuery("""
-                INSERT INTO member (login_id, password_hash, nickname, status, created_at)
-                VALUES (:loginId, 'x', '코스테스트', 'ACTIVE', NOW())
+                INSERT INTO member (social_provider, social_id, nickname, status, created_at)
+                VALUES ('KAKAO', :socialId, '코스테스트', 'ACTIVE', NOW())
                 """)
-                .setParameter("loginId", loginId)
+                .setParameter("socialId", socialId)
                 .executeUpdate();
         return ((Number) entityManager.createNativeQuery("SELECT LAST_INSERT_ID()").getSingleResult()).longValue();
     }

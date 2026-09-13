@@ -87,8 +87,8 @@ public class CandidateCompositionService {
                 BigDecimal demandEase = scoreCalculator.demandEase(row.contentId(), regionId, row.latitude(),
                         row.longitude(), travelDate);
                 BigDecimal score = scoreCalculator.score(crowdEase, demandEase);
-                scored.add(new ScoredCandidate(row.contentId(), row.title(), row.latitude(), row.longitude(),
-                        row.keywordId(), score, row.concentrationRate(), row.concentrationGrade()));
+                scored.add(new ScoredCandidate(row.contentId(), row.title(), row.imageUrl(), row.latitude(),
+                        row.longitude(), row.keywordId(), score, row.concentrationRate(), row.concentrationGrade()));
             }
             return scored;
         });
@@ -103,7 +103,7 @@ public class CandidateCompositionService {
                 ScoredCandidate candidate = window.get(i);
                 roomCandidates.add(RoomCandidate.create(travelRoomId, candidate.contentId(), candidate.keywordId(),
                         i + 1, candidate.score(), candidate.concentrationRate(), candidate.concentrationGrade(),
-                        candidate.title(), candidate.latitude(), candidate.longitude()));
+                        candidate.title(), candidate.imageUrl(), candidate.latitude(), candidate.longitude()));
             }
             roomCandidateRepository.saveAll(roomCandidates);
         });
