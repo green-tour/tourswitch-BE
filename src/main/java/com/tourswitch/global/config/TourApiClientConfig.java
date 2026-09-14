@@ -14,8 +14,8 @@ public class TourApiClientConfig {
     @Bean
     public RestClient tourApiRestClient(TourApiProperties properties) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(properties.connectTimeoutMs());
-        requestFactory.setReadTimeout(properties.readTimeoutMs());
+        requestFactory.setConnectTimeout(properties.resolvedConnectTimeoutMs());
+        requestFactory.setReadTimeout(properties.resolvedReadTimeoutMs());
 
         // baseUrl()을 쓰면 절대경로("/KorService2/...")가 RFC 3986 병합 규칙에 따라
         // baseUrl의 경로("/B551011")를 통째로 대체해버려 최종 경로가 어긋난다(실제 호출로 확인,

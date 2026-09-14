@@ -21,8 +21,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 @RequiredArgsConstructor
 public class KorServiceClient {
 
-    private static final String MOBILE_OS = "ETC";
-    private static final String MOBILE_APP = "TourSwitch";
     private static final int PAGE_SIZE = 100;
 
     private final RestClient tourApiRestClient;
@@ -88,9 +86,9 @@ public class KorServiceClient {
 
     private java.net.URI buildUri(String path, Map<String, String> params) {
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(properties.baseUrl() + path)
-                .queryParam("serviceKey", decodedServiceKey(properties.korService().serviceKey()))
-                .queryParam("MobileOS", MOBILE_OS)
-                .queryParam("MobileApp", MOBILE_APP)
+                .queryParam("serviceKey", decodedServiceKey(properties.serviceKey()))
+                .queryParam("MobileOS", properties.mobileOs())
+                .queryParam("MobileApp", properties.mobileApp())
                 .queryParam("_type", "json");
         params.forEach(builder::queryParam);
         return builder.encode().build().toUri();

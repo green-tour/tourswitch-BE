@@ -79,12 +79,16 @@ frontend:
 
 tourapi:
   base-url: https://apis.data.go.kr/B551011
+  service-key: ${TOUR_API_KEY:${TOUR_API_SERVICE_KEY:}}
+  accessibility-service-key: ${TOUR_API_ACCESSIBILITY_SERVICE_KEY:}
+  mobile-os: ETC
+  mobile-app: TourSwitch
   connect-timeout-ms: 3000
-  read-timeout-ms: 5000
-  kor-service:
-    service-key: ${TOUR_API_KEY}
-  tats-cnctr-rate:
-    service-key: ${TOUR_API_KEY}
+  read-timeout-ms: 20000
+  max-attempts: ${TOUR_API_MAX_ATTEMPTS:3}
+  retry-delay-ms: ${TOUR_API_RETRY_DELAY_MS:500}
+  accessibility-enabled: ${TOUR_API_ACCESSIBILITY_ENABLED:false}
+  detail-concurrency: ${TOUR_API_DETAIL_CONCURRENCY:4}
 
 seoul-open-api:
   base-url: ${SEOUL_OPEN_API_BASE_URL:http://openapi.seoul.go.kr:8088}
@@ -96,26 +100,11 @@ seoul-open-api:
   collection-initial-delay-ms: ${SEOUL_CROWD_COLLECTION_INITIAL_DELAY_MS:10000}
   collection-delay-ms: ${SEOUL_CROWD_COLLECTION_DELAY_MS:600000}
 
-# 한국관광공사 TourAPI
-# TOUR_API_SERVICE_KEY에는 공공데이터포털에서 받은 일반(Decoding) 인증키를 넣습니다.
-tour-api:
-  secret-key: ${TOUR_API_SERVICE_KEY:}
-  mobile-os: ETC
-  mobile-app: koreadata
-  accessibility-enabled: ${TOUR_API_ACCESSIBILITY_ENABLED:false}
-  detail-concurrency: ${TOUR_API_DETAIL_CONCURRENCY:4}
-
-external-http:
-  connect-timeout-millis: ${EXTERNAL_HTTP_CONNECT_TIMEOUT_MILLIS:5000}
-  read-timeout-millis: ${EXTERNAL_HTTP_READ_TIMEOUT_MILLIS:20000}
-  max-attempts: ${EXTERNAL_HTTP_MAX_ATTEMPTS:3}
-  retry-delay-millis: ${EXTERNAL_HTTP_RETRY_DELAY_MILLIS:500}
-
 # 한지윤 담당 외부 데이터 적재 스케줄
 data-sync:
   enabled: ${DATA_SYNC_ENABLED:true}
   tourist-spots-cron: "${DATA_SYNC_TOURIST_SPOTS_CRON:0 10 3 * * *}"
-  tourist-details-cron: "${DATA_SYNC_TOURIST_DETAILS_CRON:0 0 4 * * SUN}"
+  tourist-details-cron: "${DATA_SYNC_TOURIST_DETAILS_CRON:0 0 4 * * *}"
   crowd-forecasts-cron: "${DATA_SYNC_CROWD_FORECASTS_CRON:0 20 3 * * *}"
   realtime-statistics-cron: "${DATA_SYNC_REALTIME_STATISTICS_CRON:0 40 3 * * *}"
   integrity-check-cron: "${DATA_SYNC_INTEGRITY_CHECK_CRON:0 50 4 * * *}"

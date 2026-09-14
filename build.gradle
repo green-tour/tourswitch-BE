@@ -62,5 +62,26 @@ dependencies {
 }
 
 tasks.named('test') {
-	useJUnitPlatform()
+	useJUnitPlatform {
+		excludeTags 'external-api'
+	}
+	systemProperty 'seoul-open-api.collection-enabled', 'false'
+}
+
+tasks.register('externalApiTest', Test) {
+	group = 'verification'
+	description = 'Runs tests that call external public APIs.'
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+	useJUnitPlatform {
+		includeTags 'external-api'
+	}
+	systemProperty 'seoul-open-api.collection-enabled', 'false'
+	shouldRunAfter test
+}
+
+tasks.named('processResources') {
+	from('scripts/migrations/20260913_seoul_realtime_areas.sql') {
+		into 'sql'
+	}
 }

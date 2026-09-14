@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import java.util.Optional;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -14,6 +15,7 @@ import org.springframework.boot.test.context.SpringBootTest;
  * TOUR_API_KEY 환경변수가 필요하다.
  */
 @SpringBootTest
+@Tag("external-api")
 class KorServiceClientTest {
 
     @Autowired
