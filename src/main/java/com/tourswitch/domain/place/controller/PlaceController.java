@@ -1,6 +1,7 @@
 package com.tourswitch.domain.place.controller;
 
 import com.tourswitch.domain.place.response.PlaceDetailResponseDTO;
+import com.tourswitch.domain.place.response.PlaceForecastResponseDTO;
 import com.tourswitch.domain.place.response.PlaceSummaryResponseDTO;
 import com.tourswitch.domain.place.service.PlaceSearchService;
 import com.tourswitch.global.response.GlobalRes;
@@ -37,5 +38,12 @@ public class PlaceController {
     public GlobalRes<PlaceDetailResponseDTO> getDetail(@PathVariable String contentId,
                                                         @RequestParam(required = false) Long regionId) {
         return GlobalRes.success(placeSearchService.getDetail(contentId, regionId));
+    }
+
+    @GetMapping("/{contentId}/congestion-forecast")
+    public GlobalRes<List<PlaceForecastResponseDTO>> getForecast(
+            @PathVariable String contentId,
+            @RequestParam(defaultValue = "7") @Min(1) @Max(30) int days) {
+        return GlobalRes.success(placeSearchService.getForecasts(contentId, days));
     }
 }

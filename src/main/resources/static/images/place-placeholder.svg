@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" role="img" aria-labelledby="title description">
+  <title id="title">관광지 기본 이미지</title>
+  <desc id="description">관광지 대표 이미지가 없을 때 표시하는 기본 이미지</desc>
+  <rect width="800" height="500" fill="#eef3f7"/>
+  <path d="M0 410 205 225l120 105 135-150 340 230v90H0z" fill="#b9cbd8"/>
+  <circle cx="630" cy="125" r="55" fill="#f2c94c"/>
+  <path d="M400 105c-69 0-125 56-125 125 0 94 125 210 125 210s125-116 125-210c0-69-56-125-125-125zm0 175a50 50 0 1 1 0-100 50 50 0 0 1 0 100z" fill="#2e7d6b"/>
+</svg>
