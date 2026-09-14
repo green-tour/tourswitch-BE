@@ -1,9 +1,3 @@
-# 강사 전달용 초안. 아래를 전제로 작성했으니 실제 클러스터 구성과 다르면 조정 필요:
-# - ArgoCD가 배포 대상 클러스터 안에서 직접 돈다(destination server: in-cluster).
-# - k8s/ 아래 매니페스트를 그대로 kubectl apply하듯 동기화한다(별도 Helm/Kustomize 없음).
-# - master 브랜치 = 배포 대상(targetRevision), 새 이미지 push 후 재배포는 imagePullPolicy: Always +
-#   ArgoCD 자동 sync 또는 수동 Refresh에 의존한다. 커밋마다 반드시 새 파드로 갱신되길 원하면
-#   ArgoCD Image Updater 설치 여부를 강사와 확인해야 한다.
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
