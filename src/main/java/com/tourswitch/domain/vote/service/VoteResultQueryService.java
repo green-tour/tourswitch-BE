@@ -46,7 +46,9 @@ public class VoteResultQueryService {
                         Comparator.nullsLast(Comparator.naturalOrder()));
 
         return candidates.stream()
-                .map(candidate -> new CourseSelectionCandidate(candidate.getId(), candidate.getTouristSpotId(),
+                .map(candidate -> new CourseSelectionCandidate(candidate.getId(), candidate.getContentId(),
+                        candidate.getTitleSnapshot(), candidate.getLatitudeSnapshot(),
+                        candidate.getLongitudeSnapshot(),
                         voteCountByCandidateId.getOrDefault(candidate.getId(), 0L),
                         candidate.getConcentrationRateSnapshot()))
                 .sorted(comparator)

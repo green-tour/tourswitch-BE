@@ -2,7 +2,6 @@ package com.tourswitch.domain.data.repository;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.tourswitch.domain.data.service.SeoulRealtimeApiClient.SeoulRealtimeSource;
 import com.tourswitch.domain.data.service.TourApiClient.AccessibilitySource;
 import com.tourswitch.domain.data.service.TourApiClient.CrowdForecastSource;
 import com.tourswitch.domain.data.service.TourApiClient.FestivalPeriodSource;
@@ -11,11 +10,8 @@ import com.tourswitch.domain.data.service.TourApiClient.TouristSpotSource;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.List;
-import javax.sql.DataSource;
 import lombok.RequiredArgsConstructor;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -25,7 +21,6 @@ public class ExternalDataSyncRepository {
     private static final int BATCH_SIZE = 500;
 
     private final JdbcTemplate jdbcTemplate;
-    private final DataSource dataSource;
     private final ObjectMapper objectMapper;
 
     public void seedRegions(List<RegionSeed> regions) {
@@ -44,37 +39,6 @@ public class ExternalDataSyncRepository {
             statement.setString(2, region.districtName());
             statement.setString(3, region.districtCode());
         });
-    }
-
-    public void seedRealtimeAreasWhenMissing() {
-        Integer count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM seoul_realtime_area", Integer.class);
-        if (count != null && count >= 121) {
-            return;
-        }
-        ResourceDatabasePopulator populator = new ResourceDatabasePopulator(
-                new ClassPathResource("sql/seoul_realtime_area_data.sql")
-        );
-        populator.execute(dataSource);
-    }
-
-    public List<InvalidAreaBoundary> findInvalidAreaBoundaries() {
-        return jdbcTemplate.query("""
-                SELECT id, area_name, ST_AsText(boundary, 'axis-order=long-lat') AS boundary_wkt
-                FROM seoul_realtime_area
-                WHERE ST_IsValid(boundary) = FALSE
-                """, (resultSet, rowNumber) -> new InvalidAreaBoundary(
-                resultSet.getLong("id"),
-                resultSet.getString("area_name"),
-                resultSet.getString("boundary_wkt")
-        ));
-    }
-
-    public void updateAreaBoundary(Long areaId, String polygonWkt) {
-        jdbcTemplate.update("""
-                UPDATE seoul_realtime_area
-                SET boundary = ST_GeomFromText(?, 4326, 'axis-order=long-lat')
-                WHERE id = ?
-                """, polygonWkt, areaId);
     }
 
     public void replaceTouristSpots(List<TouristSpotUpsertCommand> commands) {
@@ -203,20 +167,6 @@ public class ExternalDataSyncRepository {
                 """, commands, BATCH_SIZE, this::setAccessibilityParameters);
     }
 
-    public List<String> findRealtimeAreaCodes() {
-        return jdbcTemplate.queryForList("""
-                SELECT area_code
-                FROM seoul_realtime_area
-                WHERE area_code IS NOT NULL
-                ORDER BY area_code
-                """, String.class);
-    }
-
-    public int countRealtimeAreas() {
-        Integer count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM seoul_realtime_area", Integer.class);
-        return count == null ? 0 : count;
-    }
-
     public DataSyncMetrics findDataSyncMetrics() {
         return new DataSyncMetrics(
                 count("SELECT COUNT(*) FROM region WHERE area_code = '11'"),
@@ -257,65 +207,6 @@ public class ExternalDataSyncRepository {
                 count("SELECT COUNT(*) FROM spot_area_link"),
                 count("SELECT COUNT(*) FROM spot_duplicate_link")
         );
-    }
-
-    public void saveRealtimeSnapshots(List<SeoulRealtimeSource> snapshots) {
-        for (SeoulRealtimeSource snapshot : snapshots) {
-            List<Long> areaIds = jdbcTemplate.queryForList(
-                    "SELECT id FROM seoul_realtime_area WHERE area_code = ?",
-                    Long.class,
-                    snapshot.areaCode()
-            );
-            if (areaIds.isEmpty()) {
-                continue;
-            }
-            Long areaId = areaIds.getFirst();
-            jdbcTemplate.update("""
-                    INSERT INTO seoul_realtime_population
-                      (seoul_realtime_area_id, congestion_level, congestion_message, population_min,
-                       population_max, resident_rate, non_resident_rate, observed_at, collected_at)
-                    SELECT ?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP()
-                    WHERE NOT EXISTS (
-                      SELECT 1 FROM seoul_realtime_population
-                      WHERE seoul_realtime_area_id = ? AND observed_at = ?
-                    )
-                    """,
-                    areaId,
-                    snapshot.congestionLevel(),
-                    snapshot.congestionMessage(),
-                    snapshot.populationMinimum(),
-                    snapshot.populationMaximum(),
-                    snapshot.residentRate(),
-                    snapshot.nonResidentRate(),
-                    snapshot.observedAt(),
-                    areaId,
-                    snapshot.observedAt()
-            );
-            jdbcTemplate.batchUpdate("""
-                    INSERT INTO seoul_realtime_forecast
-                      (seoul_realtime_area_id, forecast_time, congestion_level,
-                       population_min, population_max, collected_at)
-                    VALUES (?, ?, ?, ?, ?, UTC_TIMESTAMP())
-                    """, snapshot.forecasts(), BATCH_SIZE, (statement, forecast) -> {
-                statement.setLong(1, areaId);
-                statement.setObject(2, forecast.forecastTime());
-                statement.setString(3, forecast.congestionLevel());
-                setNullableInteger(statement, 4, forecast.populationMinimum());
-                setNullableInteger(statement, 5, forecast.populationMaximum());
-            });
-        }
-    }
-
-    public void deleteExpiredRealtimeData() {
-        jdbcTemplate.update("""
-                DELETE FROM seoul_realtime_population
-                WHERE collected_at < UTC_TIMESTAMP() - INTERVAL 30 DAY
-                """);
-        jdbcTemplate.update("""
-                DELETE FROM seoul_realtime_forecast
-                WHERE forecast_time < UTC_TIMESTAMP()
-                   OR collected_at < UTC_TIMESTAMP() - INTERVAL 3 DAY
-                """);
     }
 
     private void setTouristSpotParameters(
@@ -364,18 +255,7 @@ public class ExternalDataSyncRepository {
         statement.setString(6, source.contentId());
     }
 
-    private void setNullableInteger(PreparedStatement statement, int index, Integer value) throws SQLException {
-        if (value == null) {
-            statement.setNull(index, java.sql.Types.INTEGER);
-        } else {
-            statement.setInt(index, value);
-        }
-    }
-
     public record RegionSeed(String districtCode, String districtName) {
-    }
-
-    public record InvalidAreaBoundary(Long areaId, String areaName, String boundaryWkt) {
     }
 
     public record TouristSpotUpsertCommand(

@@ -24,9 +24,6 @@ class ExternalDataSyncServiceTest {
     private TourApiClient tourApiClient;
 
     @Mock
-    private SeoulRealtimeApiClient seoulRealtimeApiClient;
-
-    @Mock
     private ExternalDataPersistenceService persistenceService;
 
     @Mock
@@ -44,7 +41,6 @@ class ExternalDataSyncServiceTest {
     void setUp() {
         service = new ExternalDataSyncService(
                 tourApiClient,
-                seoulRealtimeApiClient,
                 persistenceService,
                 referenceDataSyncService,
                 derivedDataSyncService,

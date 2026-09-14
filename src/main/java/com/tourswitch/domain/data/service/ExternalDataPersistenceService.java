@@ -4,7 +4,6 @@ import com.tourswitch.domain.data.repository.ExternalDataSyncRepository;
 import com.tourswitch.domain.data.repository.ExternalDataSyncRepository.AccessibilityUpsertCommand;
 import com.tourswitch.domain.data.repository.ExternalDataSyncRepository.CrowdForecastUpsertCommand;
 import com.tourswitch.domain.data.repository.ExternalDataSyncRepository.TouristSpotUpsertCommand;
-import com.tourswitch.domain.data.service.SeoulRealtimeApiClient.SeoulRealtimeSource;
 import com.tourswitch.domain.data.service.TourApiClient.AccessibilitySource;
 import com.tourswitch.domain.data.service.TourApiClient.CrowdForecastSource;
 import com.tourswitch.domain.data.service.TourApiClient.FestivalPeriodSource;
@@ -81,17 +80,6 @@ public class ExternalDataPersistenceService {
                 ))
                 .toList());
         repository.deleteExpiredCrowdForecasts();
-    }
-
-    @Transactional(readOnly = true)
-    public List<String> findRealtimeAreaCodes() {
-        return repository.findRealtimeAreaCodes();
-    }
-
-    @Transactional
-    public void saveRealtimeSnapshots(List<SeoulRealtimeSource> snapshots) {
-        repository.saveRealtimeSnapshots(snapshots);
-        repository.deleteExpiredRealtimeData();
     }
 
     private boolean isCoordinateValid(TouristSpotSource source) {

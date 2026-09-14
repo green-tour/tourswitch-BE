@@ -5,7 +5,7 @@ import java.math.BigDecimal;
 
 public record CourseSpotResponseDTO(
         Long id,
-        Long touristSpotId,
+        String contentId,
         String spotRole,
         Integer visitOrder,
         String spotTitleSnapshot,
@@ -17,7 +17,7 @@ public record CourseSpotResponseDTO(
     public static CourseSpotResponseDTO from(CourseSpot courseSpot) {
         return new CourseSpotResponseDTO(
                 courseSpot.getId(),
-                courseSpot.getTouristSpotId(),
+                courseSpot.getContentId(),
                 courseSpot.getSpotRole().name(),
                 courseSpot.getVisitOrder(),
                 courseSpot.getSpotTitleSnapshot(),

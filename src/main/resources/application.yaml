@@ -1,23 +1,28 @@
 server:
   port: 8088
+
 spring:
   config:
     import: optional:file:.env[.properties]
   application:
     name: tourswitch
     version: v1
+
   threads:
     virtual:
       enabled: true
+
   web:
     error:
       include-stacktrace: always
       include-message: always
+
   datasource:
-    url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
     username: ${DB_USER}
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
+
   jpa:
     hibernate:
       # 스키마는 doc/투어스위치_DB설계.md 및 물리 DDL이 소유한다.
@@ -27,6 +32,29 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            provider: kakao
+            client-id: ${KAKAO_CLIENT_ID}
+            client-secret: ${KAKAO_CLIENT_SECRET}
+            client-authentication-method: client_secret_post
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/api/auth/oauth2/callback/{registrationId}"
+            scope:
+              - profile_nickname
+            client-name: Kakao
+
+        provider:
+          kakao:
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri: https://kauth.kakao.com/oauth/token
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+            user-name-attribute: id
+
 springdoc:
   swagger-ui:
     enabled: true
@@ -35,13 +63,38 @@ springdoc:
 
 jwt:
   secret: ${JWT_SECRET}
+  access-token-expiration-seconds: 3600
+  refresh-token-expiration-seconds: ${JWT_REFRESH_TOKEN_EXPIRATION_SECONDS}
 
-kakao:
-  client-id: ${KAKAO_CLIENT_ID}
-  client-secret: ${KAKAO_CLIENT_SECRET}
+refresh-token:
+  cookie:
+    name: refreshToken
+    secure: ${REFRESH_COOKIE_SECURE}
+    same-site: Lax
+    path: /api/auth
 
 frontend:
   callback-uri: ${FRONTEND_CALLBACK_URI}
+  origin: ${FRONTEND_ORIGIN}
+
+tourapi:
+  base-url: https://apis.data.go.kr/B551011
+  connect-timeout-ms: 3000
+  read-timeout-ms: 5000
+  kor-service:
+    service-key: ${TOUR_API_KEY}
+  tats-cnctr-rate:
+    service-key: ${TOUR_API_KEY}
+
+seoul-open-api:
+  base-url: ${SEOUL_OPEN_API_BASE_URL:http://openapi.seoul.go.kr:8088}
+  service-name: citydata
+  service-key: ${SEOUL_OPEN_API_KEY}
+  connect-timeout-ms: 3000
+  read-timeout-ms: 5000
+  collection-enabled: ${SEOUL_CROWD_COLLECTION_ENABLED:true}
+  collection-initial-delay-ms: ${SEOUL_CROWD_COLLECTION_INITIAL_DELAY_MS:10000}
+  collection-delay-ms: ${SEOUL_CROWD_COLLECTION_DELAY_MS:600000}
 
 # 한국관광공사 TourAPI
 # TOUR_API_SERVICE_KEY에는 공공데이터포털에서 받은 일반(Decoding) 인증키를 넣습니다.
@@ -58,21 +111,14 @@ external-http:
   max-attempts: ${EXTERNAL_HTTP_MAX_ATTEMPTS:3}
   retry-delay-millis: ${EXTERNAL_HTTP_RETRY_DELAY_MILLIS:500}
 
-# 서울 열린데이터광장 실시간 인구 API
-seoul-open-api:
-  base-url: ${SEOUL_OPEN_API_BASE_URL:http://openapi.seoul.go.kr:8088}
-  secret-key: ${SEOUL_OPEN_API_KEY:}
-
 # 한지윤 담당 외부 데이터 적재 스케줄
 data-sync:
   enabled: ${DATA_SYNC_ENABLED:true}
   tourist-spots-cron: "${DATA_SYNC_TOURIST_SPOTS_CRON:0 10 3 * * *}"
   tourist-details-cron: "${DATA_SYNC_TOURIST_DETAILS_CRON:0 0 4 * * SUN}"
   crowd-forecasts-cron: "${DATA_SYNC_CROWD_FORECASTS_CRON:0 20 3 * * *}"
-  seoul-realtime-cron: "${DATA_SYNC_SEOUL_REALTIME_CRON:0 */10 * * * *}"
   realtime-statistics-cron: "${DATA_SYNC_REALTIME_STATISTICS_CRON:0 40 3 * * *}"
   integrity-check-cron: "${DATA_SYNC_INTEGRITY_CHECK_CRON:0 50 4 * * *}"
-  realtime-area-codes: "${SEOUL_REALTIME_AREA_CODES:POI001,POI002,POI003,POI004,POI005,POI006,POI007,POI008,POI009,POI010,POI011,POI012,POI013,POI014,POI015,POI016,POI017,POI018,POI019,POI020,POI021,POI023,POI024,POI025,POI026,POI027,POI029,POI030,POI031,POI032,POI033,POI034,POI035,POI036,POI037,POI038,POI039,POI040,POI041,POI042,POI043,POI044,POI045,POI046,POI047,POI048,POI049,POI050,POI051,POI052,POI053,POI054,POI055,POI056,POI058,POI059,POI060,POI061,POI063,POI064,POI066,POI067,POI068,POI070,POI071,POI072,POI073,POI074,POI076,POI077,POI078,POI079,POI080,POI081,POI082,POI083,POI084,POI085,POI086,POI087,POI088,POI089,POI090,POI091,POI092,POI093,POI094,POI095,POI096,POI098,POI100,POI101,POI102,POI103,POI104,POI105,POI106,POI107,POI108,POI109,POI110,POI111,POI112,POI114,POI115,POI116,POI117,POI118,POI119,POI120,POI121,POI122,POI123,POI124,POI125,POI126,POI127,POI128,POI129,POI130,POI131}"
 
 # Log
 logging:

@@ -32,6 +32,15 @@ public class CourseQueryService {
                 .orElseThrow(() -> new CourseNotFoundException("아직 생성된 코스가 없습니다."));
     }
 
+    public Course getCourseById(Long courseId, Long memberId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new CourseNotFoundException("코스를 찾을 수 없습니다."));
+        if (!roomParticipantQueryRepository.isParticipant(course.getTravelRoomId(), memberId)) {
+            throw new CourseAccessDeniedException("이 방의 참여자만 이용할 수 있습니다.");
+        }
+        return course;
+    }
+
     public List<CourseSpot> getStops(Long courseId) {
         return courseSpotRepository.findByCourseIdOrderByVisitOrderAsc(courseId);
     }

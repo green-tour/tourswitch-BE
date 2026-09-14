@@ -41,13 +41,6 @@ public class ExternalDataSyncScheduler {
         }
     }
 
-    @Scheduled(cron = "${data-sync.seoul-realtime-cron}")
-    public void syncSeoulRealtime() {
-        if (properties.enabled()) {
-            run("seoul_realtime", service::syncSeoulRealtime);
-        }
-    }
-
     @Scheduled(cron = "${data-sync.realtime-statistics-cron}")
     public void syncRealtimeStatistics() {
         if (properties.enabled()) {

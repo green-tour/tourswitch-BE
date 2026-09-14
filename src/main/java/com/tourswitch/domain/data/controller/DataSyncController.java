@@ -47,13 +47,6 @@ public class DataSyncController {
                 "spot_crowd_forecast", service.syncCrowdForecasts()));
     }
 
-    @Operation(summary = "서울 실시간 인구 데이터 적재")
-    @PostMapping("/seoul-realtime")
-    public GlobalRes<DataSyncResponseDTO> seoulRealtime() {
-        return GlobalRes.success(DataSyncResponseDTO.of(
-                "seoul_realtime", service.syncSeoulRealtime()));
-    }
-
     @Operation(summary = "링크 및 파생 데이터 전체 재생성")
     @PostMapping("/derived-data")
     public GlobalRes<DerivedDataSyncResponseDTO> derivedData() {

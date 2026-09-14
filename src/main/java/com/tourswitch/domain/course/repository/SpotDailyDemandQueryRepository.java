@@ -16,16 +16,16 @@ public class SpotDailyDemandQueryRepository {
     @PersistenceContext
     private EntityManager entityManager;
 
-    public void increment(Long touristSpotId, LocalDate targetDate, int participantCount) {
+    public void increment(String contentId, LocalDate targetDate, int participantCount) {
         entityManager.createNativeQuery("""
-                INSERT INTO spot_daily_demand (tourist_spot_id, target_date, participant_count, course_count, updated_at)
-                VALUES (:touristSpotId, :targetDate, :participantCount, 1, NOW())
+                INSERT INTO spot_daily_demand (content_id, target_date, participant_count, course_count, updated_at)
+                VALUES (:contentId, :targetDate, :participantCount, 1, NOW())
                 ON DUPLICATE KEY UPDATE
                     participant_count = participant_count + VALUES(participant_count),
                     course_count = course_count + 1,
                     updated_at = NOW()
                 """)
-                .setParameter("touristSpotId", touristSpotId)
+                .setParameter("contentId", contentId)
                 .setParameter("targetDate", targetDate)
                 .setParameter("participantCount", participantCount)
                 .executeUpdate();

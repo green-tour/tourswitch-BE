@@ -1,6 +1,5 @@
 package com.tourswitch.domain.data.service;
 
-import com.tourswitch.domain.data.service.SeoulRealtimeApiClient.SeoulRealtimeSource;
 import com.tourswitch.domain.data.service.TourApiClient.AccessibilitySource;
 import com.tourswitch.domain.data.service.TourApiClient.CrowdForecastSource;
 import com.tourswitch.domain.data.service.TourApiClient.FestivalPeriodSource;
@@ -8,7 +7,6 @@ import com.tourswitch.domain.data.service.TourApiClient.TouristOverviewSource;
 import com.tourswitch.domain.data.service.TourApiClient.TouristSpotSource;
 import com.tourswitch.global.config.ExternalApiProperties;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +28,6 @@ public class ExternalDataSyncService {
     );
 
     private final TourApiClient tourApiClient;
-    private final SeoulRealtimeApiClient seoulRealtimeApiClient;
     private final ExternalDataPersistenceService persistenceService;
     private final ReferenceDataSyncService referenceDataSyncService;
     private final DerivedDataSyncService derivedDataSyncService;
@@ -95,18 +92,4 @@ public class ExternalDataSyncService {
         return forecasts.size();
     }
 
-    public int syncSeoulRealtime() {
-        referenceDataSyncService.synchronize();
-        List<String> areaCodes = persistenceService.findRealtimeAreaCodes();
-        List<SeoulRealtimeSource> snapshots = new ArrayList<>();
-        for (String areaCode : areaCodes) {
-            seoulRealtimeApiClient.fetch(areaCode).ifPresent(snapshots::add);
-        }
-        if (snapshots.isEmpty()) {
-            throw new IllegalStateException("서울 실시간 인구 결과가 0건이므로 기존 데이터를 변경하지 않습니다.");
-        }
-        persistenceService.saveRealtimeSnapshots(snapshots);
-        log.info("서울 실시간 인구/예측 적재 완료: 요청={}곳, 응답={}곳", areaCodes.size(), snapshots.size());
-        return snapshots.size();
-    }
 }

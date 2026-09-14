@@ -7,5 +7,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface SpotDailyDemandRepository extends JpaRepository<SpotDailyDemand, Long> {
 
-    Optional<SpotDailyDemand> findByTouristSpotIdAndTargetDate(Long touristSpotId, LocalDate targetDate);
+    Optional<SpotDailyDemand> findByContentIdAndTargetDate(String contentId, LocalDate targetDate);
 }

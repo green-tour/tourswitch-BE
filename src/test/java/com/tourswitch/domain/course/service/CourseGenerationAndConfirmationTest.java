@@ -31,10 +31,13 @@ import org.springframework.transaction.annotation.Transactional;
 class CourseGenerationAndConfirmationTest {
 
     private static final Long REGION_ID = 1L;
-    private static final Long SPOT_DONGSIPJAGAK = 11L;
-    private static final Long SPOT_DONGGWANWANGMYO = 12L;
-    private static final Long SPOT_SAJIKDAN = 53L;
+    private static final Spot SPOT_DONGSIPJAGAK = new Spot("1603677", "동십자각", 37.5760791, 126.9794211);
+    private static final Spot SPOT_DONGGWANWANGMYO = new Spot("126522", "서울 동관왕묘", 37.5727080, 127.0184229);
+    private static final Spot SPOT_SAJIKDAN = new Spot("2992891", "사직단", 37.5759365, 126.9672638);
     private static final LocalDate TRAVEL_DATE = LocalDate.of(2026, 7, 28);
+
+    private record Spot(String contentId, String title, double latitude, double longitude) {
+    }
 
     @Autowired
     private VoteService voteService;
@@ -86,8 +89,9 @@ class CourseGenerationAndConfirmationTest {
         assertThat(stops).hasSize(3);
         assertThat(stops).extracting(CourseSpot::getVisitOrder).containsExactly(1, 2, 3);
 
-        List<Long> naiveOrderSpotIds = List.of(SPOT_DONGGWANWANGMYO, SPOT_SAJIKDAN, SPOT_DONGSIPJAGAK);
-        List<Long> optimizedOrderSpotIds = stops.stream().map(CourseSpot::getTouristSpotId).toList();
+        List<String> naiveOrderSpotIds = List.of(SPOT_DONGGWANWANGMYO.contentId(), SPOT_SAJIKDAN.contentId(),
+                SPOT_DONGSIPJAGAK.contentId());
+        List<String> optimizedOrderSpotIds = stops.stream().map(CourseSpot::getContentId).toList();
         assertThat(optimizedOrderSpotIds).isNotEqualTo(naiveOrderSpotIds);
         assertThat(draftCourse.getTotalDistanceMeters()).isLessThan(5000);
 
@@ -95,19 +99,19 @@ class CourseGenerationAndConfirmationTest {
         assertThat(confirmedCourse.getStatus()).isEqualTo(CourseStatus.CONFIRMED);
         assertThat(findTravelRoomStatus(travelRoomId)).isEqualTo("COURSE_CONFIRMED");
 
-        for (Long touristSpotId : optimizedOrderSpotIds) {
-            assertThat(findParticipantCount(touristSpotId, TRAVEL_DATE)).isEqualTo(3);
+        for (String contentId : optimizedOrderSpotIds) {
+            assertThat(findParticipantCount(contentId, TRAVEL_DATE)).isEqualTo(3);
         }
 
         courseConfirmationService.confirmCourse(draftCourse.getId(), hostMemberId);
-        for (Long touristSpotId : optimizedOrderSpotIds) {
-            assertThat(findParticipantCount(touristSpotId, TRAVEL_DATE)).isEqualTo(3);
+        for (String contentId : optimizedOrderSpotIds) {
+            assertThat(findParticipantCount(contentId, TRAVEL_DATE)).isEqualTo(3);
         }
     }
 
-    private Long createCandidate(Long travelRoomId, Long touristSpotId, int displayOrder) {
-        RoomCandidate candidate = RoomCandidate.create(travelRoomId, touristSpotId, null, displayOrder, null, null,
-                null);
+    private Long createCandidate(Long travelRoomId, Spot spot, int displayOrder) {
+        RoomCandidate candidate = RoomCandidate.create(travelRoomId, spot.contentId(), null, displayOrder, null,
+                null, null, spot.title(), null, spot.latitude(), spot.longitude());
         return roomCandidateRepository.save(candidate).getId();
     }
 
@@ -117,23 +121,23 @@ class CourseGenerationAndConfirmationTest {
                 .getSingleResult();
     }
 
-    private int findParticipantCount(Long touristSpotId, LocalDate targetDate) {
+    private int findParticipantCount(String contentId, LocalDate targetDate) {
         Number count = (Number) entityManager.createNativeQuery("""
                 SELECT participant_count FROM spot_daily_demand
-                WHERE tourist_spot_id = :touristSpotId AND target_date = :targetDate
+                WHERE content_id = :contentId AND target_date = :targetDate
                 """)
-                .setParameter("touristSpotId", touristSpotId)
+                .setParameter("contentId", contentId)
                 .setParameter("targetDate", targetDate)
                 .getSingleResult();
         return count.intValue();
     }
 
-    private Long insertMember(String loginId) {
+    private Long insertMember(String socialId) {
         entityManager.createNativeQuery("""
-                INSERT INTO member (login_id, password_hash, nickname, status, created_at)
-                VALUES (:loginId, 'x', '코스테스트', 'ACTIVE', NOW())
+                INSERT INTO member (social_provider, social_id, nickname, status, created_at)
+                VALUES ('KAKAO', :socialId, '코스테스트', 'ACTIVE', NOW())
                 """)
-                .setParameter("loginId", loginId)
+                .setParameter("socialId", socialId)
                 .executeUpdate();
         return ((Number) entityManager.createNativeQuery("SELECT LAST_INSERT_ID()").getSingleResult()).longValue();
     }

@@ -102,8 +102,9 @@ public class VoteService {
                                 CandidateVoteCount::getVoteCount));
 
         List<CandidateTallyResponseDTO> candidateTallies = candidates.stream()
-                .map(candidate -> CandidateTallyResponseDTO.of(candidate.getId(), candidate.getTouristSpotId(),
-                        candidate.getDisplayOrder(), voteCountByCandidateId.getOrDefault(candidate.getId(), 0L)))
+                .map(candidate -> CandidateTallyResponseDTO.of(candidate.getId(), candidate.getContentId(),
+                        candidate.getTitleSnapshot(), candidate.getImageUrlSnapshot(), candidate.getDisplayOrder(),
+                        voteCountByCandidateId.getOrDefault(candidate.getId(), 0L)))
                 .toList();
 
         List<ParticipantStatusResponseDTO> participantStatuses = roomParticipantQueryRepository

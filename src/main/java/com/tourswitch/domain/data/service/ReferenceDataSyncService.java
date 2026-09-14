@@ -1,24 +1,14 @@
 package com.tourswitch.domain.data.service;
 
 import com.tourswitch.domain.data.repository.ExternalDataSyncRepository;
-import com.tourswitch.domain.data.repository.ExternalDataSyncRepository.InvalidAreaBoundary;
 import com.tourswitch.domain.data.repository.ExternalDataSyncRepository.RegionSeed;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.locationtech.jts.geom.Geometry;
-import org.locationtech.jts.geom.MultiPolygon;
-import org.locationtech.jts.geom.Polygon;
-import org.locationtech.jts.geom.util.GeometryFixer;
-import org.locationtech.jts.io.ParseException;
-import org.locationtech.jts.io.WKTReader;
-import org.locationtech.jts.io.WKTWriter;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class ReferenceDataSyncService {
 
     private static final List<RegionSeed> SEOUL_REGIONS = List.of(
@@ -40,49 +30,7 @@ public class ReferenceDataSyncService {
     private final ExternalDataSyncRepository repository;
 
     @Transactional
-    public ReferenceDataSyncResult synchronize() {
+    public void synchronize() {
         repository.seedRegions(SEOUL_REGIONS);
-        repository.seedRealtimeAreasWhenMissing();
-        int repairedBoundaries = repairInvalidBoundaries();
-        int realtimeAreaCount = repository.countRealtimeAreas();
-        if (realtimeAreaCount != 121) {
-            throw new IllegalStateException("서울 실시간 영역 기준정보가 121건이 아닙니다: " + realtimeAreaCount);
-        }
-        return new ReferenceDataSyncResult(SEOUL_REGIONS.size(), realtimeAreaCount, repairedBoundaries);
-    }
-
-    private int repairInvalidBoundaries() {
-        List<InvalidAreaBoundary> invalidBoundaries = repository.findInvalidAreaBoundaries();
-        for (InvalidAreaBoundary boundary : invalidBoundaries) {
-            Polygon fixedPolygon = fixPolygon(boundary);
-            repository.updateAreaBoundary(boundary.areaId(), new WKTWriter().write(fixedPolygon));
-            log.warn("유효하지 않은 서울 영역 경계를 자동 복구했습니다: areaName={}", boundary.areaName());
-        }
-        return invalidBoundaries.size();
-    }
-
-    private Polygon fixPolygon(InvalidAreaBoundary boundary) {
-        try {
-            Geometry fixed = GeometryFixer.fix(new WKTReader().read(boundary.boundaryWkt()));
-            if (fixed instanceof Polygon polygon) {
-                return polygon;
-            }
-            if (fixed instanceof MultiPolygon multiPolygon && multiPolygon.getNumGeometries() > 0) {
-                Polygon largest = null;
-                for (int index = 0; index < multiPolygon.getNumGeometries(); index++) {
-                    Polygon candidate = (Polygon) multiPolygon.getGeometryN(index);
-                    if (largest == null || candidate.getArea() > largest.getArea()) {
-                        largest = candidate;
-                    }
-                }
-                return largest;
-            }
-            throw new IllegalStateException("영역 경계를 Polygon으로 복구할 수 없습니다: " + boundary.areaName());
-        } catch (ParseException exception) {
-            throw new IllegalStateException("영역 경계 WKT를 파싱할 수 없습니다: " + boundary.areaName(), exception);
-        }
-    }
-
-    public record ReferenceDataSyncResult(int regions, int realtimeAreas, int repairedBoundaries) {
     }
 }
