@@ -28,10 +28,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Rollback
 class RealtimeChangeIntegrationTest {
 
-    private static final Long JONGNO_REGION_ID = 1L;
-    private static final Long CHEONGUN_HYOJA_DONG_ID = 1L;
-    private static final Long MUSEUM_KEYWORD_ID = 1L;
-
     @Autowired
     private RealtimeChangeQueryService realtimeChangeQueryService;
 
@@ -52,10 +48,14 @@ class RealtimeChangeIntegrationTest {
 
     @Test
     void 여행방_키워드와_동_기준_3km로_후보를_조회하고_한_장소를_교체한다() {
+        Long regionId = findRegionId();
+        Long keywordId = findKeywordId();
+        Long administrativeDongId = insertAdministrativeDong(regionId);
+        insertReplacementCandidate(regionId, keywordId);
         Long memberId = insertMember();
-        Long travelRoomId = insertTravelRoom(memberId);
+        Long travelRoomId = insertTravelRoom(memberId, regionId);
         insertParticipant(travelRoomId, memberId);
-        insertRoomKeyword(travelRoomId, MUSEUM_KEYWORD_ID);
+        insertRoomKeyword(travelRoomId, keywordId);
 
         Course course = Course.create(travelRoomId, LocalDate.now());
         course.confirm();
@@ -69,7 +69,7 @@ class RealtimeChangeIntegrationTest {
         entityManager.flush();
 
         ReplacementCandidatesResponseDTO response = realtimeChangeQueryService.getReplacementCandidates(
-                course.getId(), CHEONGUN_HYOJA_DONG_ID, memberId, 20);
+                course.getId(), administrativeDongId, memberId, 20);
 
         assertThat(response.radiusMeters()).isEqualTo(3_000);
         assertThat(response.administrativeDong().dongName()).isEqualTo("청운효자동");
@@ -85,7 +85,7 @@ class RealtimeChangeIntegrationTest {
                 course.getId(),
                 courseSpot.getId(),
                 memberId,
-                new CourseSpotReplacementRequestDTO(CHEONGUN_HYOJA_DONG_ID, selected.contentId()));
+                new CourseSpotReplacementRequestDTO(administrativeDongId, selected.contentId()));
 
         entityManager.flush();
         entityManager.clear();
@@ -101,13 +101,13 @@ class RealtimeChangeIntegrationTest {
 
     private Long insertMember() {
         entityManager.createNativeQuery("""
-                INSERT INTO member (login_id, password_hash, nickname, status, created_at)
-                VALUES ('realtime_change_test_member', 'x', '실시간변경테스트', 'ACTIVE', NOW())
+                INSERT INTO member (social_provider, social_id, nickname, status, created_at)
+                VALUES ('KAKAO', 'realtime_change_test_member', '실시간변경테스트', 'ACTIVE', NOW())
                 """).executeUpdate();
         return lastInsertId();
     }
 
-    private Long insertTravelRoom(Long hostMemberId) {
+    private Long insertTravelRoom(Long hostMemberId, Long regionId) {
         entityManager.createNativeQuery("""
                 INSERT INTO travel_room
                     (invite_token, host_member_id, room_name, travel_date, region_id, course_spot_count,
@@ -118,7 +118,7 @@ class RealtimeChangeIntegrationTest {
                 """)
                 .setParameter("hostMemberId", hostMemberId)
                 .setParameter("travelDate", LocalDate.now())
-                .setParameter("regionId", JONGNO_REGION_ID)
+                .setParameter("regionId", regionId)
                 .executeUpdate();
         return lastInsertId();
     }
@@ -140,6 +140,53 @@ class RealtimeChangeIntegrationTest {
                 VALUES (:travelRoomId, :keywordId)
                 """)
                 .setParameter("travelRoomId", travelRoomId)
+                .setParameter("keywordId", keywordId)
+                .executeUpdate();
+    }
+
+    private Long findRegionId() {
+        return ((Number) entityManager.createNativeQuery("""
+                SELECT id FROM region WHERE district_code = '11110'
+                """).getSingleResult()).longValue();
+    }
+
+    private Long findKeywordId() {
+        return ((Number) entityManager.createNativeQuery("""
+                SELECT id FROM keyword WHERE keyword_name = '전시·박물관'
+                """).getSingleResult()).longValue();
+    }
+
+    private Long insertAdministrativeDong(Long regionId) {
+        entityManager.createNativeQuery("""
+                INSERT INTO administrative_dong
+                  (region_id, dong_code, dong_name, center_latitude, center_longitude, is_active)
+                VALUES (:regionId, 'realtime-test-dong', '청운효자동', 37.5840, 126.9707, TRUE)
+                """)
+                .setParameter("regionId", regionId)
+                .executeUpdate();
+        return lastInsertId();
+    }
+
+    private void insertReplacementCandidate(Long regionId, Long keywordId) {
+        entityManager.createNativeQuery("""
+                INSERT INTO tourist_spot
+                  (content_id, content_type_id, title, normalized_title, address, normalized_address,
+                   latitude, longitude, location_point, classification_level1_code,
+                   classification_level2_code, classification_level3_code, region_id,
+                   is_coordinate_valid, has_crowd_data, is_active, data_synced_at)
+                VALUES ('realtime-replacement-candidate', 14, '청운 미술관', '청운미술관',
+                        '서울 종로구 청운동', '서울종로구청운동', 37.5845, 126.9710,
+                        ST_GeomFromText('POINT(126.9710 37.5845)', 4326, 'axis-order=long-lat'),
+                        'VE', 'VE07', 'VE0701', :regionId, TRUE, FALSE, TRUE, UTC_TIMESTAMP())
+                """)
+                .setParameter("regionId", regionId)
+                .executeUpdate();
+        Long touristSpotId = lastInsertId();
+        entityManager.createNativeQuery("""
+                INSERT INTO spot_keyword_link (tourist_spot_id, keyword_id)
+                VALUES (:touristSpotId, :keywordId)
+                """)
+                .setParameter("touristSpotId", touristSpotId)
                 .setParameter("keywordId", keywordId)
                 .executeUpdate();
     }

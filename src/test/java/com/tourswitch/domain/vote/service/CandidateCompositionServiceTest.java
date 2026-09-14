@@ -17,19 +17,14 @@ import org.springframework.test.annotation.Rollback;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * spot_keyword_link 매칭 배치(투어스위치_spot_keyword_link_배치.sql) 실행 후의 실제 데이터로
- * 후보 구성 파이프라인(라운드로빈 배분 + 순환 윈도우 + 점수 계산)이 끝까지 동작하는지 확인한다.
- * 종로구(region_id=1)의 전시·박물관/역사유적 키워드는 각각 100건, 50건 이상 매칭돼 있어
- * 라운드로빈이 실제로 두 키워드를 섞어 배분하는지도 함께 검증한다.
- * 트랜잭션 롤백으로 정리하므로 방/회원 등 테스트에서 만든 행은 남지 않는다.
+ * 자체 DB에 적재된 관광지·키워드 링크를 이용해 후보 구성 파이프라인이 끝까지 동작하는지 확인한다.
+ * 외부 또는 개발 DB의 기존 데이터에 의존하지 않도록 필요한 관광지와 링크를 직접 준비한다.
  */
 @SpringBootTest
 @Transactional
 @Rollback
 class CandidateCompositionServiceTest {
 
-    private static final Long REGION_ID = 1L;
-    private static final List<Long> KEYWORD_IDS = List.of(1L, 4L);
     private static final int MAX_CANDIDATES = 20;
     private static final LocalDate TRAVEL_DATE = LocalDate.of(2026, 7, 28);
 
@@ -44,10 +39,13 @@ class CandidateCompositionServiceTest {
 
     @Test
     void 실제_매칭_데이터로_후보를_구성하고_키워드를_섞어_배분한다() {
+        Long regionId = findRegionId();
+        List<Long> keywordIds = List.of(findKeywordId("전시·박물관"), findKeywordId("역사유적"));
+        insertTouristSpots(regionId, keywordIds);
         Long memberId = insertTestMember();
-        Long travelRoomId = insertTestTravelRoom(memberId);
+        Long travelRoomId = insertTestTravelRoom(memberId, regionId);
 
-        candidateCompositionService.composeCandidates(travelRoomId, REGION_ID, TRAVEL_DATE, KEYWORD_IDS);
+        candidateCompositionService.composeCandidates(travelRoomId, regionId, TRAVEL_DATE, keywordIds);
 
         List<RoomCandidate> candidates = roomCandidateRepository.findByTravelRoomIdOrderByDisplayOrderAsc(
                 travelRoomId);
@@ -56,7 +54,7 @@ class CandidateCompositionServiceTest {
         assertThat(candidates).extracting(RoomCandidate::getDisplayOrder)
                 .containsExactlyElementsOf(IntStream.rangeClosed(1, MAX_CANDIDATES).boxed().collect(Collectors.toList()));
         assertThat(candidates).allSatisfy(candidate -> assertThat(candidate.getRecommendationScore()).isNotNull());
-        assertThat(candidates).extracting(RoomCandidate::getKeywordId).contains(1L, 4L);
+        assertThat(candidates).extracting(RoomCandidate::getKeywordId).containsAll(keywordIds);
     }
 
     private Long insertTestMember() {
@@ -67,7 +65,7 @@ class CandidateCompositionServiceTest {
         return ((Number) entityManager.createNativeQuery("SELECT LAST_INSERT_ID()").getSingleResult()).longValue();
     }
 
-    private Long insertTestTravelRoom(Long hostMemberId) {
+    private Long insertTestTravelRoom(Long hostMemberId, Long regionId) {
         entityManager.createNativeQuery("""
                 INSERT INTO travel_room
                     (invite_token, host_member_id, room_name, travel_date, region_id, course_spot_count,
@@ -79,8 +77,53 @@ class CandidateCompositionServiceTest {
                 """)
                 .setParameter("hostMemberId", hostMemberId)
                 .setParameter("travelDate", TRAVEL_DATE)
-                .setParameter("regionId", REGION_ID)
+                .setParameter("regionId", regionId)
                 .executeUpdate();
         return ((Number) entityManager.createNativeQuery("SELECT LAST_INSERT_ID()").getSingleResult()).longValue();
+    }
+
+    private Long findRegionId() {
+        return ((Number) entityManager.createNativeQuery("""
+                SELECT id FROM region WHERE district_code = '11110'
+                """).getSingleResult()).longValue();
+    }
+
+    private Long findKeywordId(String keywordName) {
+        return ((Number) entityManager.createNativeQuery("""
+                SELECT id FROM keyword WHERE keyword_name = :keywordName
+                """)
+                .setParameter("keywordName", keywordName)
+                .getSingleResult()).longValue();
+    }
+
+    private void insertTouristSpots(Long regionId, List<Long> keywordIds) {
+        for (int index = 1; index <= MAX_CANDIDATES; index++) {
+            String contentId = "candidate_fixture_" + index;
+            entityManager.createNativeQuery("""
+                    INSERT INTO tourist_spot
+                      (content_id, content_type_id, title, normalized_title, address, normalized_address,
+                       latitude, longitude, location_point, classification_level1_code,
+                       classification_level2_code, classification_level3_code, region_id,
+                       is_coordinate_valid, has_crowd_data, is_active, data_synced_at)
+                    VALUES (:contentId, 12, :title, :normalizedTitle, '서울 종로구', '서울종로구',
+                            37.57, 126.98,
+                            ST_GeomFromText('POINT(126.98 37.57)', 4326, 'axis-order=long-lat'),
+                            'HS', 'HS01', 'HS0101', :regionId, TRUE, FALSE, TRUE, UTC_TIMESTAMP())
+                    """)
+                    .setParameter("contentId", contentId)
+                    .setParameter("title", "후보 관광지 " + index)
+                    .setParameter("normalizedTitle", "후보관광지" + index)
+                    .setParameter("regionId", regionId)
+                    .executeUpdate();
+            Long touristSpotId = ((Number) entityManager.createNativeQuery("SELECT LAST_INSERT_ID()")
+                    .getSingleResult()).longValue();
+            entityManager.createNativeQuery("""
+                    INSERT INTO spot_keyword_link (tourist_spot_id, keyword_id)
+                    VALUES (:touristSpotId, :keywordId)
+                    """)
+                    .setParameter("touristSpotId", touristSpotId)
+                    .setParameter("keywordId", keywordIds.get((index - 1) % keywordIds.size()))
+                    .executeUpdate();
+        }
     }
 }

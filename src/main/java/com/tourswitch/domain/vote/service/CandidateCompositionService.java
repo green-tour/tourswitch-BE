@@ -18,11 +18,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 방 생성 시점 후보 구성(계획 문서 3단계). TourAPI 실시간전환 이후 이 메서드 자체는
- * @Transactional을 걸지 않는다 - 내부에서 TourAPI를 다건 호출하는데, 외부 API 호출을
- * 트랜잭션 안에 두지 않는다는 B3 규칙 때문이다(TourAPI 실시간전환 계획 문서 8절). API 호출과
- * 점수 계산을 먼저 끝내고, DB 저장(candidate_offset 배정 + room_candidate 저장)만 짧은
- * 트랜잭션으로 묶는다.
+ * 자체 DB에 적재된 관광지·키워드·혼잡도 데이터를 조합해 방 생성 시점의 후보를 구성한다.
+ * 점수 계산과 후보 저장의 쓰기 구간만 짧은 트랜잭션으로 묶는다.
  */
 @Service
 @RequiredArgsConstructor

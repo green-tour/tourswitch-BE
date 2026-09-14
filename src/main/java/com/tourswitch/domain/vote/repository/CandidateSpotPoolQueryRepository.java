@@ -1,92 +1,67 @@
 package com.tourswitch.domain.vote.repository;
 
-import com.tourswitch.global.client.tourapi.KorServiceClient;
-import com.tourswitch.global.client.tourapi.TatsCnctrRateClient;
-import com.tourswitch.global.client.tourapi.TourApiCongestionItem;
-import com.tourswitch.global.client.tourapi.TourApiSpotItem;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
-/**
- * 후보 후보군을 TourAPI에서 실시간으로 조회한다(TourAPI 실시간전환 계획 문서 5.1절).
- * 로컬 tourist_spot/spot_keyword_link/spot_crowd_forecast를 더 이상 쓰지 않는다.
- */
 @Repository
-@RequiredArgsConstructor
 public class CandidateSpotPoolQueryRepository {
 
     private static final List<Integer> CANDIDATE_CONTENT_TYPE_IDS = List.of(12, 14, 15, 28);
-    private static final DateTimeFormatter BASE_YMD_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd");
 
-    private final KorServiceClient korServiceClient;
-    private final TatsCnctrRateClient tatsCnctrRateClient;
-    private final RegionQueryRepository regionQueryRepository;
-    private final KeywordClassificationQueryRepository keywordClassificationQueryRepository;
+    @PersistenceContext
+    private EntityManager entityManager;
 
+    @SuppressWarnings("unchecked")
     public List<CandidateSpotRow> findCandidatePool(Long regionId, List<Long> keywordIds, LocalDate travelDate) {
-        RegionRow region = regionQueryRepository.findById(regionId)
-                .orElseThrow(() -> new IllegalStateException("존재하지 않는 지역입니다: " + regionId));
+        List<Object[]> rows = entityManager.createNativeQuery("""
+                SELECT tourist_spot.content_id, tourist_spot.title, tourist_spot.first_image_url,
+                       tourist_spot.latitude, tourist_spot.longitude, keyword_link.keyword_id,
+                       forecast.concentration_rate, forecast.concentration_grade
+                FROM tourist_spot tourist_spot
+                JOIN spot_keyword_link keyword_link
+                  ON keyword_link.tourist_spot_id = tourist_spot.id
+                LEFT JOIN spot_crowd_link crowd_link
+                  ON crowd_link.tourist_spot_id = tourist_spot.id
+                LEFT JOIN spot_crowd_forecast forecast
+                  ON forecast.attraction_name = crowd_link.attraction_name
+                 AND forecast.district_code = crowd_link.district_code
+                 AND forecast.forecast_date = :travelDate
+                WHERE tourist_spot.region_id = :regionId
+                  AND tourist_spot.is_active = TRUE
+                  AND tourist_spot.is_coordinate_valid = TRUE
+                  AND tourist_spot.content_type_id IN (:contentTypeIds)
+                  AND keyword_link.keyword_id IN (:keywordIds)
+                  AND NOT EXISTS (
+                    SELECT 1 FROM spot_duplicate_link duplicate_link
+                    WHERE duplicate_link.tourist_spot_id = tourist_spot.id
+                  )
+                ORDER BY keyword_link.keyword_id,
+                         CASE WHEN forecast.concentration_rate IS NULL THEN 1 ELSE 0 END,
+                         forecast.concentration_rate, tourist_spot.id
+                """)
+                .setParameter("regionId", regionId)
+                .setParameter("keywordIds", keywordIds)
+                .setParameter("travelDate", travelDate)
+                .setParameter("contentTypeIds", CANDIDATE_CONTENT_TYPE_IDS)
+                .getResultList();
 
-        Map<String, TourApiCongestionItem> congestionByName = fetchCongestionByName(region, travelDate);
-
-        // (contentId) 최초 매칭만 유지 - 같은 관광지가 여러 키워드에 매칭돼도 하나의 키워드에만 귀속시킨다.
-        Map<String, CandidateSpotRow> firstMatchByContentId = new LinkedHashMap<>();
-        for (Long keywordId : keywordIds) {
-            for (String classificationLevel2Code : keywordClassificationQueryRepository
-                    .findClassificationLevel2CodesByKeywordId(keywordId)) {
-                for (int contentTypeId : CANDIDATE_CONTENT_TYPE_IDS) {
-                    List<TourApiSpotItem> items = korServiceClient.areaBasedList2(region.legalDongAreaCode(),
-                            region.legalDongDistrictCode(), contentTypeId, classificationLevel2Code);
-                    for (TourApiSpotItem item : items) {
-                        firstMatchByContentId.putIfAbsent(item.contentId(), toRow(item, keywordId, congestionByName));
-                    }
-                }
-            }
-        }
-        return List.copyOf(firstMatchByContentId.values());
+        return rows.stream().map(this::toRow).toList();
     }
 
-    private Map<String, TourApiCongestionItem> fetchCongestionByName(RegionRow region, LocalDate travelDate) {
-        String targetBaseYmd = travelDate.format(BASE_YMD_FORMAT);
-        Map<String, TourApiCongestionItem> byName = new LinkedHashMap<>();
-        for (TourApiCongestionItem item : tatsCnctrRateClient.tatsCnctrRatedList(region.legalDongAreaCode(),
-                region.districtCode())) {
-            if (targetBaseYmd.equals(item.baseYmd())) {
-                byName.put(item.touristSpotName(), item);
-            }
-        }
-        return byName;
-    }
-
-    private CandidateSpotRow toRow(TourApiSpotItem item, Long keywordId,
-                                   Map<String, TourApiCongestionItem> congestionByName) {
-        TourApiCongestionItem congestion = congestionByName.get(item.title());
-        BigDecimal concentrationRate = congestion == null ? null : congestion.concentrationRate();
-        String concentrationGrade = toGrade(concentrationRate);
-        return new CandidateSpotRow(item.contentId(), item.title(), item.firstImageUrl(), item.latitude(),
-                item.longitude(), keywordId, concentrationRate, concentrationGrade);
-    }
-
-    private String toGrade(BigDecimal concentrationRate) {
-        if (concentrationRate == null) {
-            return null;
-        }
-        double rate = concentrationRate.doubleValue();
-        if (rate < 25) {
-            return "여유";
-        }
-        if (rate < 50) {
-            return "보통";
-        }
-        if (rate < 75) {
-            return "약간 붐빔";
-        }
-        return "붐빔";
+    private CandidateSpotRow toRow(Object[] row) {
+        return new CandidateSpotRow(
+                (String) row[0],
+                (String) row[1],
+                (String) row[2],
+                ((Number) row[3]).doubleValue(),
+                ((Number) row[4]).doubleValue(),
+                ((Number) row[5]).longValue(),
+                (BigDecimal) row[6],
+                (String) row[7]
+        );
     }
 }

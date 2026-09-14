@@ -25,9 +25,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * 투표 종료 시점에 자동으로 코스 초안(DRAFT)을 만든다(계획 문서 5단계, DB설계 8.1절).
  * 득표 상위 course_spot_count곳을 뽑아 방문 순서를 최적화하고, 방장이 켠 부가 카테고리가
- * 있으면 각 경유지 주변의 후보도 함께 채운다. TourAPI 실시간전환 이후 부가후보 조회가
- * TourAPI 호출이라, DB 읽기(짧은 트랜잭션) -> API 호출(트랜잭션 밖) -> DB 저장(짧은 트랜잭션)
- * 순으로 나눈다(B3 규칙, 계획 문서 8절).
+ * 있으면 자체 DB의 좌표를 기준으로 각 경유지 주변 후보도 함께 채운다.
  */
 @Service
 @RequiredArgsConstructor
