@@ -5,7 +5,7 @@ import com.tourswitch.domain.data.service.TourApiClient.CrowdForecastSource;
 import com.tourswitch.domain.data.service.TourApiClient.FestivalPeriodSource;
 import com.tourswitch.domain.data.service.TourApiClient.TouristOverviewSource;
 import com.tourswitch.domain.data.service.TourApiClient.TouristSpotSource;
-import com.tourswitch.global.config.ExternalApiProperties;
+import com.tourswitch.global.client.tourapi.TourApiProperties;
 import java.time.LocalDate;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +32,7 @@ public class ExternalDataSyncService {
     private final ReferenceDataSyncService referenceDataSyncService;
     private final DerivedDataSyncService derivedDataSyncService;
     private final CrowdLinkService crowdLinkService;
-    private final ExternalApiProperties tourApiProperties;
+    private final TourApiProperties tourApiProperties;
 
     public int syncTouristSpots() {
         referenceDataSyncService.synchronize();
@@ -68,12 +68,15 @@ public class ExternalDataSyncService {
 
         int accessibilityCount = 0;
         if (tourApiProperties.accessibilityEnabled()) {
-            List<AccessibilitySource> accessibilityDetails = tourApiClient.fetchAccessibilityDetails(contentIds);
-            if (accessibilityDetails.isEmpty()) {
-                throw new IllegalStateException("TourAPI 접근성 결과가 0건이므로 기존 데이터를 변경하지 않습니다.");
+            try {
+                List<AccessibilitySource> accessibilityDetails = tourApiClient.fetchAccessibilityDetails(contentIds);
+                if (!accessibilityDetails.isEmpty()) {
+                    persistenceService.upsertAccessibility(accessibilityDetails);
+                    accessibilityCount = accessibilityDetails.size();
+                }
+            } catch (RuntimeException exception) {
+                log.warn("접근성 API 수집 실패로 기존 접근성 데이터를 유지합니다.", exception);
             }
-            persistenceService.replaceAccessibility(accessibilityDetails);
-            accessibilityCount = accessibilityDetails.size();
         }
         log.info("관광지 상세 적재 완료: 소개={}건, 접근성={}건, 접근성수집활성={}",
                 overviewCount, accessibilityCount, tourApiProperties.accessibilityEnabled());

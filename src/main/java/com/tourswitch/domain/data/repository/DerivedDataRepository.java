@@ -71,15 +71,27 @@ public class DerivedDataRepository {
 
     public List<AreaLinkCandidate> findInsideAreaCandidates() {
         return findAreaCandidates("""
-                MBRIntersects(area.boundary, tourist_spot.location_point)
+                area.latitude IS NOT NULL
+                AND area.longitude IS NOT NULL
+                AND ABS(tourist_spot.latitude - area.latitude) <= 0.050
+                AND ABS(tourist_spot.longitude - area.longitude) <= 0.070
+                AND MBRIntersects(area.boundary, tourist_spot.location_point)
                 AND ST_Intersects(area.boundary, tourist_spot.location_point)
                 """, true);
     }
 
     public List<AreaLinkCandidate> findProximityAreaCandidates() {
         return findAreaCandidates("""
-                NOT ST_Intersects(area.boundary, tourist_spot.location_point)
-                AND ST_Distance(area.boundary, tourist_spot.location_point) <= 1000
+                area.latitude IS NOT NULL
+                AND area.longitude IS NOT NULL
+                AND ABS(tourist_spot.latitude - area.latitude) <= 0.010
+                AND ABS(tourist_spot.longitude - area.longitude) <= 0.015
+                AND NOT ST_Intersects(area.boundary, tourist_spot.location_point)
+                AND ST_Distance_Sphere(
+                      tourist_spot.location_point,
+                      ST_GeomFromText(CONCAT('POINT(', area.longitude, ' ', area.latitude, ')'),
+                          4326, 'axis-order=long-lat')
+                    ) <= 1000
                 """, false);
     }
 
@@ -200,23 +212,31 @@ public class DerivedDataRepository {
     }
 
     private List<AreaLinkCandidate> findAreaCandidates(String spatialCondition, boolean insideBoundary) {
+        String distanceExpression = insideBoundary
+                ? "0"
+                : """
+                  ROUND(ST_Distance_Sphere(
+                      tourist_spot.location_point,
+                      ST_GeomFromText(CONCAT('POINT(', area.longitude, ' ', area.latitude, ')'),
+                          4326, 'axis-order=long-lat')
+                  ))
+                  """;
         String sql = """
                 SELECT tourist_spot.id AS tourist_spot_id, tourist_spot.title,
                        area.id AS area_id, area.area_code, area.area_name,
                        CAST(ST_Area(area.boundary) AS DECIMAL(14,3)) AS area_size,
                        CAST(%s AS UNSIGNED) AS distance_meters
                 FROM tourist_spot tourist_spot
-                JOIN seoul_realtime_area area
-                  ON CASE WHEN ST_IsValid(area.boundary) = TRUE THEN (%s) ELSE FALSE END
+                JOIN seoul_realtime_area area ON (%s)
                 WHERE tourist_spot.is_active = TRUE
                   AND tourist_spot.is_coordinate_valid = TRUE
+                  AND ST_IsValid(area.boundary) = TRUE
                   AND NOT EXISTS (
                     SELECT 1 FROM spot_duplicate_link duplicate_link
                     WHERE duplicate_link.tourist_spot_id = tourist_spot.id
                   )
                 ORDER BY tourist_spot.id, area.area_code, area.id
-                """.formatted(insideBoundary ? "0" : "ROUND(ST_Distance(area.boundary, tourist_spot.location_point))",
-                spatialCondition);
+                """.formatted(distanceExpression, spatialCondition);
         return jdbcTemplate.query(sql, (resultSet, rowNumber) -> new AreaLinkCandidate(
                 resultSet.getLong("tourist_spot_id"),
                 resultSet.getString("title"),

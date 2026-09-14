@@ -20,11 +20,12 @@ public class CrowdLinkService {
 
     private static final String EXACT_MATCH_METHOD = "EXACT";
     private static final String NORMALIZED_MATCH_METHOD = "NORMALIZED";
+    private static final String SIMILAR_MATCH_METHOD = "SIMILAR";
     private final CrowdLinkRepository crowdLinkRepository;
     private final PlaceNameMatcher placeNameMatcher;
 
     /**
-     * 같은 자치구에서 원문 또는 정규화 명칭이 완전히 일치하는 관광지만 자동 링크한다.
+     * 같은 자치구에서 원문·정규화 일치를 우선하고, 단일 최고 유사 후보만 자동 링크한다.
      * 수동으로 검토한 링크는 삭제하거나 덮어쓰지 않는다.
      */
     @Transactional
@@ -74,7 +75,7 @@ public class CrowdLinkService {
                 .filter(touristSpot -> touristSpot.normalizedTitle().equals(normalizedAttractionName))
                 .toList();
         if (normalizedMatches.isEmpty()) {
-            return Optional.empty();
+            return createSimilarLinkCommand(attraction, districtTouristSpots, normalizedAttractionName);
         }
 
         List<NormalizedTouristSpot> originalNameMatches = normalizedMatches.stream()
@@ -99,6 +100,39 @@ public class CrowdLinkService {
                                 ? EXACT_MATCH_METHOD
                                 : NORMALIZED_MATCH_METHOD
                 ));
+    }
+
+    private Optional<CrowdLinkSaveCommand> createSimilarLinkCommand(
+            CrowdForecastLinkCandidate attraction,
+            List<NormalizedTouristSpot> districtTouristSpots,
+            String normalizedAttractionName
+    ) {
+        List<SimilarityCandidate> candidates = districtTouristSpots.stream()
+                .filter(touristSpot -> placeNameMatcher.isSimilarEnough(
+                        touristSpot.normalizedTitle(), normalizedAttractionName))
+                .map(touristSpot -> new SimilarityCandidate(
+                        touristSpot,
+                        placeNameMatcher.calculateSimilarityPercent(
+                                touristSpot.normalizedTitle(), normalizedAttractionName)
+                ))
+                .sorted(java.util.Comparator.comparingInt(SimilarityCandidate::similarityPercent).reversed())
+                .toList();
+        if (candidates.isEmpty()) {
+            return Optional.empty();
+        }
+        SimilarityCandidate best = candidates.getFirst();
+        if (candidates.size() > 1
+                && candidates.get(1).similarityPercent() == best.similarityPercent()) {
+            log.warn("혼잡도 유사 링크 보류: districtCode={}, attractionName={}, 최고점 동률={}점",
+                    attraction.districtCode(), attraction.attractionName(), best.similarityPercent());
+            return Optional.empty();
+        }
+        return Optional.of(new CrowdLinkSaveCommand(
+                best.touristSpot().touristSpotId(),
+                attraction.attractionName(),
+                attraction.districtCode(),
+                SIMILAR_MATCH_METHOD
+        ));
     }
 
     private long countReviewCandidates(
@@ -135,5 +169,8 @@ public class CrowdLinkService {
             String title,
             String normalizedTitle
     ) {
+    }
+
+    private record SimilarityCandidate(NormalizedTouristSpot touristSpot, int similarityPercent) {
     }
 }

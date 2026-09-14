@@ -1212,6 +1212,11 @@ ON DUPLICATE KEY UPDATE
     longitude = VALUES(longitude),
     boundary = VALUES(boundary);
 
+-- 원본 쌍문역 경계는 한 지점에서 자기 교차가 발생하므로 외곽선을 보존하는 유효 폴리곤으로 보정한다.
+UPDATE seoul_realtime_area
+SET boundary = ST_SRID(ST_ConvexHull(ST_SRID(boundary, 0)), 4326)
+WHERE area_code = 'POI070' AND ST_IsValid(boundary) = FALSE;
+
 COMMIT;
 
 SELECT COUNT(*) AS seoul_realtime_area_count FROM seoul_realtime_area;

@@ -37,6 +37,7 @@ public class ExternalDataPersistenceService {
                 .map(source -> new TouristSpotUpsertCommand(
                         source,
                         placeNameMatcher.normalize(source.title()),
+                        placeNameMatcher.normalize(source.address()),
                         isCoordinateValid(source)
                 ))
                 .toList();
@@ -60,7 +61,7 @@ public class ExternalDataPersistenceService {
     }
 
     @Transactional
-    public void replaceAccessibility(List<AccessibilitySource> accessibilityDetails) {
+    public void upsertAccessibility(List<AccessibilitySource> accessibilityDetails) {
         List<AccessibilityUpsertCommand> commands = accessibilityDetails.stream()
                 .map(source -> new AccessibilityUpsertCommand(
                         source,
@@ -68,7 +69,7 @@ public class ExternalDataPersistenceService {
                         accessibilityClassifier.isAccessible(source.strollerDescription())
                 ))
                 .toList();
-        repository.replaceAccessibility(commands);
+        repository.upsertAccessibility(commands);
     }
 
     @Transactional

@@ -34,7 +34,7 @@ class CrowdLinkServiceTest {
     }
 
     @Test
-    void synchronizeLinks_partialMatch_doesNotCreateAutomaticLink() {
+    void synchronizeLinks_uniqueSimilarityAboveEighty_createsSimilarLink() {
         // Given
         when(crowdLinkRepository.findActiveTouristSpots()).thenReturn(List.of(
                 new TouristSpotLinkCandidate(1L, "11680", "롯데월드타워"),
@@ -50,8 +50,10 @@ class CrowdLinkServiceTest {
 
         // Then
         verify(crowdLinkRepository).saveAll(commandsCaptor.capture());
-        assertThat(linkedCount).isZero();
-        assertThat(commandsCaptor.getValue()).isEmpty();
+        assertThat(linkedCount).isEqualTo(1);
+        assertThat(commandsCaptor.getValue()).containsExactly(
+                new CrowdLinkSaveCommand(1L, "롯데월드타워점", "11680", "SIMILAR")
+        );
     }
 
     @Test
@@ -89,6 +91,23 @@ class CrowdLinkServiceTest {
         int linkedCount = crowdLinkService.synchronizeLinks();
 
         // Then
+        verify(crowdLinkRepository).saveAll(commandsCaptor.capture());
+        assertThat(linkedCount).isZero();
+        assertThat(commandsCaptor.getValue()).isEmpty();
+    }
+
+    @Test
+    void synchronizeLinks_bestSimilarityTied_doesNotCreateLink() {
+        when(crowdLinkRepository.findActiveTouristSpots()).thenReturn(List.of(
+                new TouristSpotLinkCandidate(1L, "11680", "가나다라마바사자"),
+                new TouristSpotLinkCandidate(2L, "11680", "가나다라마바사차")
+        ));
+        when(crowdLinkRepository.findCrowdForecastAttractions()).thenReturn(List.of(
+                new CrowdForecastLinkCandidate("11680", "가나다라마바사아")
+        ));
+
+        int linkedCount = crowdLinkService.synchronizeLinks();
+
         verify(crowdLinkRepository).saveAll(commandsCaptor.capture());
         assertThat(linkedCount).isZero();
         assertThat(commandsCaptor.getValue()).isEmpty();

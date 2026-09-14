@@ -50,11 +50,12 @@ public class ExternalDataSyncRepository {
                 """);
         jdbcTemplate.batchUpdate("""
                 INSERT INTO tourist_spot
-                  (content_id, content_type_id, title, normalized_title, address, latitude, longitude,
+                  (content_id, content_type_id, title, normalized_title, address, normalized_address,
+                   latitude, longitude,
                    location_point, first_image_url, classification_level1_code, classification_level2_code,
                    classification_level3_code, region_id, is_coordinate_valid, has_crowd_data, is_active,
                    data_synced_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?,
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?,
                         ST_GeomFromText(CONCAT('POINT(', ?, ' ', ?, ')'), 4326, 'axis-order=long-lat'),
                         ?, ?, ?, ?,
                         (SELECT id
@@ -67,6 +68,7 @@ public class ExternalDataSyncRepository {
                 ON DUPLICATE KEY UPDATE
                   content_type_id = VALUES(content_type_id), title = VALUES(title),
                   normalized_title = VALUES(normalized_title), address = VALUES(address),
+                  normalized_address = VALUES(normalized_address),
                   latitude = VALUES(latitude), longitude = VALUES(longitude),
                   location_point = VALUES(location_point), first_image_url = VALUES(first_image_url),
                   classification_level1_code = VALUES(classification_level1_code),
@@ -150,8 +152,7 @@ public class ExternalDataSyncRepository {
         jdbcTemplate.update("DELETE FROM spot_crowd_forecast WHERE forecast_date < UTC_DATE()");
     }
 
-    public void replaceAccessibility(List<AccessibilityUpsertCommand> commands) {
-        jdbcTemplate.update("DELETE FROM spot_accessibility");
+    public void upsertAccessibility(List<AccessibilityUpsertCommand> commands) {
         jdbcTemplate.batchUpdate("""
                 INSERT INTO spot_accessibility
                   (tourist_spot_id, has_wheelchair_access, has_stroller_access,
@@ -219,18 +220,19 @@ public class ExternalDataSyncRepository {
         statement.setString(3, source.title());
         statement.setString(4, command.normalizedTitle());
         statement.setString(5, source.address());
-        statement.setBigDecimal(6, source.latitude());
-        statement.setBigDecimal(7, source.longitude());
+        statement.setString(6, command.normalizedAddress());
+        statement.setBigDecimal(7, source.latitude());
         statement.setBigDecimal(8, source.longitude());
-        statement.setBigDecimal(9, source.latitude());
-        statement.setString(10, source.firstImageUrl());
-        statement.setString(11, source.classificationLevel1Code());
-        statement.setString(12, source.classificationLevel2Code());
-        statement.setString(13, source.classificationLevel3Code());
-        statement.setString(14, source.districtCode());
-        statement.setString(15, source.address());
-        statement.setString(16, source.districtCode());
-        statement.setBoolean(17, command.coordinateValid());
+        statement.setBigDecimal(9, source.longitude());
+        statement.setBigDecimal(10, source.latitude());
+        statement.setString(11, source.firstImageUrl());
+        statement.setString(12, source.classificationLevel1Code());
+        statement.setString(13, source.classificationLevel2Code());
+        statement.setString(14, source.classificationLevel3Code());
+        statement.setString(15, source.districtCode());
+        statement.setString(16, source.address());
+        statement.setString(17, source.districtCode());
+        statement.setBoolean(18, command.coordinateValid());
     }
 
     private int count(String sql) {
@@ -261,6 +263,7 @@ public class ExternalDataSyncRepository {
     public record TouristSpotUpsertCommand(
             TouristSpotSource source,
             String normalizedTitle,
+            String normalizedAddress,
             boolean coordinateValid
     ) {
     }

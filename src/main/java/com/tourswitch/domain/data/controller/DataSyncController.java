@@ -3,6 +3,7 @@ package com.tourswitch.domain.data.controller;
 import com.tourswitch.domain.data.response.DataSyncResponseDTO;
 import com.tourswitch.domain.data.response.DataSyncStatusResponseDTO;
 import com.tourswitch.domain.data.response.DerivedDataSyncResponseDTO;
+import com.tourswitch.domain.data.response.FullDataSyncResponseDTO;
 import com.tourswitch.domain.data.service.DataSyncVerificationService;
 import com.tourswitch.domain.data.service.DerivedDataSyncService;
 import com.tourswitch.domain.data.service.ExternalDataSyncService;
@@ -31,6 +32,23 @@ public class DataSyncController {
     public GlobalRes<DataSyncResponseDTO> touristSpots() {
         return GlobalRes.success(DataSyncResponseDTO.of(
                 "tourist_spot", service.syncTouristSpots()));
+    }
+
+    @Operation(summary = "관광지·상세·혼잡도·링크 전체 순차 적재")
+    @PostMapping("/all")
+    public GlobalRes<FullDataSyncResponseDTO> synchronizeAll() {
+        int touristSpots = service.syncTouristSpots();
+        int touristDetails = service.syncTouristDetails();
+        int crowdForecasts = service.syncCrowdForecasts();
+        DerivedDataSyncResponseDTO derivedData = DerivedDataSyncResponseDTO.from(
+                derivedDataSyncService.synchronizeAll());
+        return GlobalRes.success(new FullDataSyncResponseDTO(
+                touristSpots,
+                touristDetails,
+                crowdForecasts,
+                derivedData,
+                verificationService.getStatus()
+        ));
     }
 
     @Operation(summary = "관광지 소개 및 접근성 상세 적재")

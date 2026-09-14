@@ -1,13 +1,14 @@
 package com.tourswitch.domain.data.service;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.tourswitch.domain.data.service.TourApiClient.FestivalPeriodSource;
 import com.tourswitch.domain.data.service.TourApiClient.TouristSpotSource;
-import com.tourswitch.global.config.ExternalApiProperties;
+import com.tourswitch.global.client.tourapi.TourApiProperties;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -45,7 +46,10 @@ class ExternalDataSyncServiceTest {
                 referenceDataSyncService,
                 derivedDataSyncService,
                 crowdLinkService,
-                new ExternalApiProperties("key", "ETC", "test", false, 1)
+                new TourApiProperties(
+                        "https://example.com", "key", "", "ETC", "test",
+                        3_000, 20_000, 3, 500, false, 1
+                )
         );
     }
 
@@ -86,5 +90,29 @@ class ExternalDataSyncServiceTest {
         verify(derivedDataSyncService).synchronizeConfirmedDuplicates();
         verify(derivedDataSyncService).synchronizeKeywordLinks();
         verify(derivedDataSyncService).synchronizeAreaLinks();
+    }
+
+    @Test
+    void syncTouristDetails_accessibilityFailure_keepsExistingData() {
+        ExternalDataSyncService accessibilityService = new ExternalDataSyncService(
+                tourApiClient,
+                persistenceService,
+                referenceDataSyncService,
+                derivedDataSyncService,
+                crowdLinkService,
+                new TourApiProperties(
+                        "https://example.com", "key", "accessibility-key", "ETC", "test",
+                        3_000, 20_000, 3, 500, true, 1
+                )
+        );
+        when(persistenceService.findActiveCardContentIds()).thenReturn(List.of("1"));
+        when(persistenceService.findActiveCardContentIdsWithoutOverview()).thenReturn(List.of());
+        when(tourApiClient.fetchAccessibilityDetails(List.of("1")))
+                .thenThrow(new IllegalStateException("권한 없음"));
+
+        int synchronizedRows = accessibilityService.syncTouristDetails();
+
+        assertThat(synchronizedRows).isZero();
+        verify(persistenceService, never()).upsertAccessibility(org.mockito.ArgumentMatchers.anyList());
     }
 }

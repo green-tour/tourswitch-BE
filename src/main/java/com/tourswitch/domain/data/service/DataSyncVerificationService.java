@@ -3,7 +3,7 @@ package com.tourswitch.domain.data.service;
 import com.tourswitch.domain.data.repository.ExternalDataSyncRepository;
 import com.tourswitch.domain.data.repository.ExternalDataSyncRepository.DataSyncMetrics;
 import com.tourswitch.domain.data.response.DataSyncStatusResponseDTO;
-import com.tourswitch.global.config.ExternalApiProperties;
+import com.tourswitch.global.client.tourapi.TourApiProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class DataSyncVerificationService {
 
     private final ExternalDataSyncRepository repository;
-    private final ExternalApiProperties tourApiProperties;
+    private final TourApiProperties tourApiProperties;
 
     @Transactional(readOnly = true)
     public DataSyncStatusResponseDTO getStatus() {
@@ -28,9 +28,13 @@ public class DataSyncVerificationService {
     @Transactional(readOnly = true)
     public int countIntegrityIssues() {
         DataSyncMetrics metrics = repository.findDataSyncMetrics();
+        int accessibilityIssue = tourApiProperties.accessibilityEnabled() && metrics.accessibilityRows() == 0 ? 1 : 0;
         return metrics.touristSpotsMissingRegion()
+                + metrics.touristSpotsMissingClassification()
                 + metrics.invalidAreaBoundaries()
-                + metrics.staleCrowdLinks();
+                + metrics.staleCrowdLinks()
+                + Math.max(0, 121 - metrics.recentlyCollectedRealtimeAreas())
+                + accessibilityIssue;
     }
 
     private boolean isCoreDataComplete(DataSyncMetrics metrics) {
@@ -39,6 +43,8 @@ public class DataSyncVerificationService {
                 && metrics.keywordClassifications() == 31
                 && metrics.activeTouristSpots() > 0
                 && metrics.touristSpotsMissingRegion() == 0
+                && metrics.touristSpotsMissingClassification() == 0
+                && (!tourApiProperties.accessibilityEnabled() || metrics.accessibilityRows() > 0)
                 && metrics.keywordLinks() > 0
                 && metrics.futureCrowdForecasts() > 0
                 && metrics.crowdLinks() > 0
@@ -46,6 +52,7 @@ public class DataSyncVerificationService {
                 && metrics.futureCrowdGradeThresholds() > 0
                 && metrics.realtimeAreas() == 121
                 && metrics.invalidAreaBoundaries() == 0
+                && metrics.recentlyCollectedRealtimeAreas() == 121
                 && metrics.areaLinks() > 0
                 && metrics.duplicateLinks() == 3;
     }

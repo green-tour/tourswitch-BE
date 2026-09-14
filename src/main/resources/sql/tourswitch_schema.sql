@@ -53,6 +53,7 @@ CREATE TABLE tourist_spot (
     title VARCHAR(500) NOT NULL,
     normalized_title VARCHAR(500) NOT NULL,
     address VARCHAR(1000) NULL,
+    normalized_address VARCHAR(1000) NOT NULL DEFAULT '',
     latitude DECIMAL(10,7) NULL,
     longitude DECIMAL(10,7) NULL,
     location_point POINT SRID 4326 NOT NULL,
@@ -72,6 +73,7 @@ CREATE TABLE tourist_spot (
     UNIQUE KEY uk_tourist_spot_content_id (content_id),
     KEY idx_tourist_spot_region (region_id),
     KEY idx_tourist_spot_candidate (region_id, content_type_id, is_active),
+    KEY idx_tourist_spot_search (region_id, classification_level2_code, content_type_id, is_active),
     KEY idx_tourist_spot_normalized_title (normalized_title),
     SPATIAL INDEX sx_tourist_spot_location (location_point),
     CONSTRAINT fk_tourist_spot_region
@@ -212,7 +214,7 @@ CREATE TABLE spot_crowd_link (
     CONSTRAINT fk_spot_crowd_link_tourist_spot
         FOREIGN KEY (tourist_spot_id) REFERENCES tourist_spot (id)
         ON UPDATE RESTRICT ON DELETE RESTRICT,
-    CHECK (match_method IN ('EXACT', 'NORMALIZED', 'MANUAL'))
+    CHECK (match_method IN ('EXACT', 'NORMALIZED', 'SIMILAR', 'MANUAL'))
 ) ENGINE=InnoDB;
 
 CREATE TABLE spot_area_link (

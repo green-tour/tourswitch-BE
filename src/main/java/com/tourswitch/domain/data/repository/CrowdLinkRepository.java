@@ -50,7 +50,7 @@ public class CrowdLinkRepository {
     public void deleteAutomaticallyMatchedLinks() {
         jdbcTemplate.update("""
                 DELETE FROM spot_crowd_link
-                WHERE match_method IN ('EXACT', 'NORMALIZED')
+                WHERE match_method IN ('EXACT', 'NORMALIZED', 'SIMILAR')
                 """);
     }
 

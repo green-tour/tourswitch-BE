@@ -2,8 +2,7 @@ package com.tourswitch.domain.data.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.tourswitch.global.config.ExternalApiProperties;
-import com.tourswitch.global.config.ExternalHttpProperties;
+import com.tourswitch.global.client.tourapi.TourApiProperties;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.time.LocalDate;
@@ -30,14 +29,12 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Slf4j
 public class TourApiClient {
 
-    private static final String TOUR_BASE_URL = "https://apis.data.go.kr/B551011";
     private static final int PAGE_SIZE = 1_000;
     private static final int MAX_PAGE = 1_000;
 
-    private final RestClient.Builder restClientBuilder;
+    private final RestClient tourApiRestClient;
     private final ObjectMapper objectMapper;
-    private final ExternalApiProperties properties;
-    private final ExternalHttpProperties httpProperties;
+    private final TourApiProperties properties;
 
     public List<TouristSpotSource> fetchSeoulTouristSpots() {
         return fetchPages("/KorService2/areaBasedList2",
@@ -90,7 +87,7 @@ public class TourApiClient {
     }
 
     private Optional<AccessibilitySource> fetchAccessibility(String contentId) {
-        URI uri = baseBuilder("/KorWithService2/detailWithTour2")
+        URI uri = baseBuilder("/KorWithService2/detailWithTour2", properties.resolvedAccessibilityServiceKey())
                 .queryParam("contentId", contentId)
                 .build()
                 .encode()
@@ -164,9 +161,9 @@ public class TourApiClient {
 
     private JsonNode read(URI uri) {
         RuntimeException lastException = null;
-        for (int attempt = 1; attempt <= httpProperties.resolvedMaxAttempts(); attempt++) {
+        for (int attempt = 1; attempt <= properties.resolvedMaxAttempts(); attempt++) {
             try {
-                String response = restClientBuilder.build().get().uri(uri).retrieve().body(String.class);
+                String response = tourApiRestClient.get().uri(uri).retrieve().body(String.class);
                 if (!StringUtils.hasText(response)) {
                     throw new IllegalStateException("외부 API가 빈 응답을 반환했습니다.");
                 }
@@ -180,7 +177,7 @@ public class TourApiClient {
                 );
             } catch (RuntimeException exception) {
                 lastException = exception;
-                if (attempt < httpProperties.resolvedMaxAttempts()) {
+                if (attempt < properties.resolvedMaxAttempts()) {
                     waitBeforeRetry(attempt);
                 }
             } catch (Exception exception) {
@@ -212,8 +209,15 @@ public class TourApiClient {
 
     private UriComponentsBuilder baseBuilder(String path) {
         requireServiceKey();
-        return UriComponentsBuilder.fromUriString(TOUR_BASE_URL + path)
-                .queryParam("serviceKey", properties.secretKey())
+        return baseBuilder(path, properties.serviceKey());
+    }
+
+    private UriComponentsBuilder baseBuilder(String path, String serviceKey) {
+        if (!StringUtils.hasText(serviceKey)) {
+            throw new IllegalStateException("외부 API 서비스 키가 설정되지 않았습니다.");
+        }
+        return UriComponentsBuilder.fromUriString(properties.baseUrl() + path)
+                .queryParam("serviceKey", serviceKey)
                 .queryParam("MobileOS", properties.mobileOs())
                 .queryParam("MobileApp", properties.mobileApp())
                 .queryParam("_type", "json");
@@ -276,7 +280,7 @@ public class TourApiClient {
 
     private void waitBeforeRetry(int attempt) {
         try {
-            Thread.sleep(httpProperties.resolvedRetryDelayMillis() * attempt);
+            Thread.sleep(properties.resolvedRetryDelayMs() * attempt);
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("외부 API 재시도 대기가 중단되었습니다.", exception);
@@ -284,8 +288,8 @@ public class TourApiClient {
     }
 
     private void requireServiceKey() {
-        if (!StringUtils.hasText(properties.secretKey())) {
-            throw new IllegalStateException("TOUR_API_SERVICE_KEY가 설정되지 않았습니다.");
+        if (!StringUtils.hasText(properties.serviceKey())) {
+            throw new IllegalStateException("TOUR_API_KEY가 설정되지 않았습니다.");
         }
     }
 
