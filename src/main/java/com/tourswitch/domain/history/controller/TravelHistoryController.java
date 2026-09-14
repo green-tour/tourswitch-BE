@@ -33,8 +33,7 @@ public class TravelHistoryController {
     @GetMapping("/{courseId}")
     public GlobalRes<CourseResponseDTO> getHistory(@PathVariable Long courseId, @RequestParam Long memberId) {
         Course course = courseQueryService.getCourseById(courseId, memberId);
-        List<CourseSpotResponseDTO> stops = courseQueryService.getStops(courseId).stream()
-                .map(CourseSpotResponseDTO::from).toList();
+        List<CourseSpotResponseDTO> stops = courseQueryService.getStopResponses(courseId);
         List<CourseExtraCandidateResponseDTO> extras = courseQueryService.getExtraCandidates(courseId).stream()
                 .map(CourseExtraCandidateResponseDTO::from).toList();
         return GlobalRes.success(CourseResponseDTO.of(course, stops, extras));

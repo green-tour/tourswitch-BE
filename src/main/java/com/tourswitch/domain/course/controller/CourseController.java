@@ -38,9 +38,7 @@ public class CourseController {
     }
 
     private CourseResponseDTO toResponse(Course course) {
-        List<CourseSpotResponseDTO> stops = courseQueryService.getStops(course.getId()).stream()
-                .map(CourseSpotResponseDTO::from)
-                .toList();
+        List<CourseSpotResponseDTO> stops = courseQueryService.getStopResponses(course.getId());
         List<CourseExtraCandidateResponseDTO> extraCandidates = courseQueryService.getExtraCandidates(course.getId())
                 .stream()
                 .map(CourseExtraCandidateResponseDTO::from)

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.tourswitch.domain.course.entity.Course;
 import com.tourswitch.domain.course.entity.CourseSpot;
 import com.tourswitch.domain.course.entity.CourseStatus;
+import com.tourswitch.domain.course.response.CourseSpotResponseDTO;
 import com.tourswitch.domain.vote.entity.RoomCandidate;
 import com.tourswitch.domain.vote.repository.RoomCandidateRepository;
 import com.tourswitch.domain.vote.service.VoteService;
@@ -56,6 +57,9 @@ class CourseGenerationAndConfirmationTest {
 
     @Test
     void 전원_완료시_코스가_최적순서로_자동생성되고_확정하면_수요가_반영된다() {
+        insertTouristSpot(SPOT_DONGSIPJAGAK);
+        insertTouristSpot(SPOT_DONGGWANWANGMYO);
+        insertTouristSpot(SPOT_SAJIKDAN);
         Long hostMemberId = insertMember("smoke_test_course_host");
         Long member2Id = insertMember("smoke_test_course_member2");
         Long member3Id = insertMember("smoke_test_course_member3");
@@ -88,6 +92,12 @@ class CourseGenerationAndConfirmationTest {
         List<CourseSpot> stops = courseQueryService.getStops(draftCourse.getId());
         assertThat(stops).hasSize(3);
         assertThat(stops).extracting(CourseSpot::getVisitOrder).containsExactly(1, 2, 3);
+        List<CourseSpotResponseDTO> stopResponses = courseQueryService.getStopResponses(draftCourse.getId());
+        assertThat(stopResponses).allSatisfy(stop -> {
+            assertThat(stop.latitude()).isNotNull();
+            assertThat(stop.longitude()).isNotNull();
+            assertThat(stop.address()).isEqualTo("서울 종로구");
+        });
 
         List<String> naiveOrderSpotIds = List.of(SPOT_DONGGWANWANGMYO.contentId(), SPOT_SAJIKDAN.contentId(),
                 SPOT_DONGSIPJAGAK.contentId());
@@ -113,6 +123,30 @@ class CourseGenerationAndConfirmationTest {
         RoomCandidate candidate = RoomCandidate.create(travelRoomId, spot.contentId(), null, displayOrder, null,
                 null, null, spot.title(), null, spot.latitude(), spot.longitude());
         return roomCandidateRepository.save(candidate).getId();
+    }
+
+    private void insertTouristSpot(Spot spot) {
+        entityManager.createNativeQuery("""
+                INSERT INTO tourist_spot
+                  (content_id, content_type_id, title, normalized_title, address, normalized_address,
+                   latitude, longitude, location_point, classification_level1_code,
+                   classification_level2_code, classification_level3_code, region_id,
+                   is_coordinate_valid, has_crowd_data, is_active, data_synced_at)
+                VALUES (:contentId, 12, :title, :title, '서울 종로구', '서울종로구',
+                        :latitude, :longitude,
+                        ST_GeomFromText(CONCAT('POINT(', :longitude, ' ', :latitude, ')'),
+                            4326, 'axis-order=long-lat'),
+                        'HS', 'HS01', 'HS0101', :regionId, TRUE, FALSE, TRUE, UTC_TIMESTAMP())
+                ON DUPLICATE KEY UPDATE
+                  address = VALUES(address), latitude = VALUES(latitude), longitude = VALUES(longitude),
+                  location_point = VALUES(location_point), is_active = TRUE
+                """)
+                .setParameter("contentId", spot.contentId())
+                .setParameter("title", spot.title())
+                .setParameter("latitude", spot.latitude())
+                .setParameter("longitude", spot.longitude())
+                .setParameter("regionId", REGION_ID)
+                .executeUpdate();
     }
 
     private String findTravelRoomStatus(Long travelRoomId) {

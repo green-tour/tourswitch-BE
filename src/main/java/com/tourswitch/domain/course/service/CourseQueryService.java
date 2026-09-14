@@ -8,8 +8,14 @@ import com.tourswitch.domain.course.exception.CourseNotFoundException;
 import com.tourswitch.domain.course.repository.CourseExtraCandidateRepository;
 import com.tourswitch.domain.course.repository.CourseRepository;
 import com.tourswitch.domain.course.repository.CourseSpotRepository;
+import com.tourswitch.domain.course.repository.CourseSpotPlaceQueryRepository;
+import com.tourswitch.domain.course.repository.CourseSpotPlaceQueryRepository.CourseSpotPlaceRow;
+import com.tourswitch.domain.course.response.CourseSpotResponseDTO;
 import com.tourswitch.domain.vote.repository.RoomParticipantQueryRepository;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +27,7 @@ public class CourseQueryService {
 
     private final CourseRepository courseRepository;
     private final CourseSpotRepository courseSpotRepository;
+    private final CourseSpotPlaceQueryRepository courseSpotPlaceQueryRepository;
     private final CourseExtraCandidateRepository courseExtraCandidateRepository;
     private final RoomParticipantQueryRepository roomParticipantQueryRepository;
 
@@ -45,7 +52,24 @@ public class CourseQueryService {
         return courseSpotRepository.findByCourseIdOrderByVisitOrderAsc(courseId);
     }
 
+    public List<CourseSpotResponseDTO> getStopResponses(Long courseId) {
+        Map<Long, CourseSpotPlaceRow> placesByCourseSpotId = courseSpotPlaceQueryRepository.findByCourseId(courseId)
+                .stream()
+                .collect(Collectors.toMap(CourseSpotPlaceRow::courseSpotId, Function.identity()));
+        return getStops(courseId).stream()
+                .map(courseSpot -> toResponse(courseSpot, placesByCourseSpotId.get(courseSpot.getId())))
+                .toList();
+    }
+
     public List<CourseExtraCandidate> getExtraCandidates(Long courseId) {
         return courseExtraCandidateRepository.findByCourseId(courseId);
+    }
+
+    private CourseSpotResponseDTO toResponse(CourseSpot courseSpot, CourseSpotPlaceRow place) {
+        if (place == null) {
+            return CourseSpotResponseDTO.of(courseSpot, null, null, null);
+        }
+        return CourseSpotResponseDTO.of(
+                courseSpot, place.address(), place.latitude(), place.longitude());
     }
 }
