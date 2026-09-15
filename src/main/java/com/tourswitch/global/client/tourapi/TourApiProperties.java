@@ -2,7 +2,7 @@ package com.tourswitch.global.client.tourapi;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@ConfigurationProperties(prefix = "tourapi")
+@ConfigurationProperties(prefix = "tour-api")
 public record TourApiProperties(
         String baseUrl,
         String serviceKey,
