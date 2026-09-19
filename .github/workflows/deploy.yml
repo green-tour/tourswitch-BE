@@ -36,3 +36,29 @@ jobs:
           tags: |
             ${{ env.IMAGE }}:latest
             ${{ env.IMAGE }}:${{ steps.tag.outputs.sha }}
+
+      - name: 매니페스트 저장소 체크아웃
+        uses: actions/checkout@v4
+        with:
+          repository: green-tour/tourswitch-k8s-manifests
+          ref: main
+          ssh-key: ${{ secrets.MANIFESTS_DEPLOY_KEY }}
+          path: manifests
+
+      - name: 매니페스트 이미지 태그 갱신
+        working-directory: manifests
+        env:
+          SHA: ${{ steps.tag.outputs.sha }}
+        run: |
+          sed -i "s|image: ${IMAGE}:.*|image: ${IMAGE}:${SHA}|" k8s/deployment.yaml
+          if git diff --quiet; then
+            echo "이미 ${SHA} 태그이므로 커밋할 변경이 없다"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "이미지 태그를 ${SHA}로 갱신"
+          git push origin main || {
+            git pull --rebase origin main
+            git push origin main
+          }
