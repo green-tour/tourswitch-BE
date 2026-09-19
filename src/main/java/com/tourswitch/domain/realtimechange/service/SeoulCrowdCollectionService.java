@@ -8,35 +8,51 @@ import jakarta.persistence.PersistenceContext;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class SeoulCrowdCollectionService {
 
     private static final ZoneId SEOUL_ZONE_ID = ZoneId.of("Asia/Seoul");
     private final SeoulCityDataClient client;
     private final SeoulOpenApiProperties properties;
+    private final TransactionTemplate transactionTemplate;
 
     @PersistenceContext
     private EntityManager entityManager;
 
+    public SeoulCrowdCollectionService(
+            SeoulCityDataClient client,
+            SeoulOpenApiProperties properties,
+            PlatformTransactionManager transactionManager
+    ) {
+        this.client = client;
+        this.properties = properties;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
+        this.transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+    }
+
+    /**
+     * 영역마다 별도 트랜잭션으로 저장한다.
+     * 수집 전체를 한 트랜잭션으로 묶으면 한 영역의 제약 위반이 트랜잭션을 rollback-only로 표시해
+     * 예외를 잡아도 커밋 시점에 나머지 영역의 정상 데이터까지 함께 롤백된다.
+     */
     @Scheduled(initialDelayString = "${seoul-open-api.collection-initial-delay-ms:10000}",
             fixedDelayString = "${seoul-open-api.collection-delay-ms:600000}")
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void collect() {
         if (!properties.collectionEnabled()) return;
         for (Object[] area : findAreas()) {
             Long areaId = ((Number) area[0]).longValue();
             String areaCode = (String) area[1];
             try {
-                client.getCrowd(areaCode).ifPresent(snapshot -> save(areaId, snapshot));
+                client.getCrowd(areaCode).ifPresent(snapshot ->
+                        transactionTemplate.executeWithoutResult(status -> save(areaId, snapshot)));
             } catch (RuntimeException exception) {
                 log.warn("서울시 혼잡도 수집 실패. areaCode={}", areaCode, exception);
             }

@@ -304,7 +304,7 @@ CREATE TABLE `seoul_realtime_population` (
   PRIMARY KEY (`id`),
   KEY `idx_seoul_realtime_population_area_collected` (`seoul_realtime_area_id`,`collected_at`),
   CONSTRAINT `fk_seoul_realtime_population_area` FOREIGN KEY (`seoul_realtime_area_id`) REFERENCES `seoul_realtime_area` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
-  CONSTRAINT `seoul_realtime_population_chk_1` CHECK (((`congestion_level` is null) or (`congestion_level` in (_utf8mb4'여유',_utf8mb4'보통',_utf8mb4'약간붐빔',_utf8mb4'붐빔'))))
+  CONSTRAINT `seoul_realtime_population_chk_1` CHECK (((`congestion_level` is null) or (`congestion_level` in (_utf8mb4'여유',_utf8mb4'보통',_utf8mb4'약간 붐빔',_utf8mb4'붐빔'))))
 ) ENGINE=InnoDB AUTO_INCREMENT=122 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='30분 간격 적재, 30일 보존(배치 삭제), raw_json 미저장(5.4절)';
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
