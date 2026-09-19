@@ -1,8 +1,8 @@
 package com.tourswitch.global.spatial.mapper;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.tourswitch.global.spatial.model.GeoJsonPolygon;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,7 +26,7 @@ public class GeoJsonPolygonMapper {
             JsonNode root = objectMapper.readTree(geoJson);
             validatePolygon(root);
             return GeoJsonPolygon.from(coordinates(root.path("coordinates")));
-        } catch (JsonProcessingException exception) {
+        } catch (JacksonException exception) {
             throw new IllegalArgumentException("GeoJSON 문자열을 파싱할 수 없습니다.", exception);
         }
     }
@@ -35,7 +35,7 @@ public class GeoJsonPolygonMapper {
      * 입력 geometry가 좌표를 가진 Polygon인지 검증한다.
      */
     private void validatePolygon(JsonNode root) {
-        if (root == null || !GeoJsonPolygon.TYPE.equals(root.path("type").asText())) {
+        if (root == null || !GeoJsonPolygon.TYPE.equals(root.path("type").asString())) {
             throw new IllegalArgumentException("GeoJSON Polygon 형식이 아닙니다.");
         }
         if (!root.path("coordinates").isArray() || root.path("coordinates").isEmpty()) {
