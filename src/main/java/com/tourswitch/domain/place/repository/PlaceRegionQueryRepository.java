@@ -27,4 +27,17 @@ public class PlaceRegionQueryRepository {
         Object[] row = rows.get(0);
         return Optional.of(new PlaceRegionRow((String) row[0], (String) row[1], (String) row[2], (String) row[3]));
     }
+
+    @SuppressWarnings("unchecked")
+    public List<PlaceRegionRow> findAll() {
+        List<Object[]> rows = entityManager.createNativeQuery("""
+                SELECT district_name, legal_dong_area_code, legal_dong_district_code, district_code
+                FROM region
+                ORDER BY id
+                """)
+                .getResultList();
+        return rows.stream()
+                .map(row -> new PlaceRegionRow((String) row[0], (String) row[1], (String) row[2], (String) row[3]))
+                .toList();
+    }
 }

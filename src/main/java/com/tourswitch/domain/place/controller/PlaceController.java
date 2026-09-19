@@ -28,9 +28,10 @@ public class PlaceController {
     public GlobalRes<PageRes<PlaceSummaryResponseDTO>> search(
             @RequestParam(required = false) Long regionId,
             @RequestParam(required = false) List<String> keywordCodes,
+            @RequestParam(required = false) String congestionLevel,
             @RequestParam(defaultValue = "1") @Min(1) int page,
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
-        return GlobalRes.success(placeSearchService.search(regionId, keywordCodes, page, size));
+        return GlobalRes.success(placeSearchService.search(regionId, keywordCodes, congestionLevel, page, size));
     }
 
     @GetMapping("/{contentId}")
