@@ -1,5 +1,9 @@
 server:
   port: 8088
+  # FE(Vercel)가 /api 요청을 이 서버로 rewrite하므로 Host 헤더는 BE 도메인으로 바뀐다.
+  # 원래 호스트가 담긴 X-Forwarded-* 를 반영해야 OAuth2 redirect_uri가 FE 도메인으로 생성되고,
+  # 카카오 콜백이 프록시를 거쳐 돌아와 인가 요청 세션과 리프레시 쿠키가 같은 사이트에 유지된다.
+  forward-headers-strategy: framework
 
 spring:
   config:
