@@ -20,14 +20,20 @@ import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 /**
- * 관광지 검색·필터(SRS "관광지 검색·필터", Should). 후보 구성과 동일하게 로컬 캐시 없이
- * TourAPI를 실시간으로 호출한다(TourAPI 실시간전환 계획 문서 2절). 서울 MVP라 지역을 지정하지
- * 않으면 서울(11) 전체를 대상으로 검색하고, 그 경우 자치구 단위로만 조회되는
- * TatsCnctrRateService는 부르지 않아 혼잡도는 비워 둔다(확정되지 않은 값을 노출하지 않는다는
+ * 관광지 검색·필터(SRS "관광지 검색·필터", Should). 관광지 마스터를 DB에 적재하지 않고
+ * TourAPI를 원본으로 삼는다(TourAPI 실시간전환 계획 문서 2절).
+ *
+ * 화면이 지역 선택 없이도 카드마다 자치구명과 혼잡도를 요구하므로 SeoulPlaceCache의
+ * 자치구별 스냅샷을 우선 사용한다. 스냅샷이 아직 비어 있는 기동 직후에는 기존 경로대로
+ * TourAPI를 직접 호출하며, 이때 지역을 지정하지 않으면 자치구 단위로만 조회되는
+ * TatsCnctrRateService를 부르지 않아 혼잡도는 비워 둔다(확정되지 않은 값을 노출하지 않는다는
  * 회의록 정책).
  */
 @Service
@@ -42,10 +48,16 @@ public class PlaceSearchService {
     private final TatsCnctrRateClient tatsCnctrRateClient;
     private final PlaceRegionQueryRepository placeRegionQueryRepository;
     private final PlaceKeywordClassificationQueryRepository placeKeywordClassificationQueryRepository;
+    private final SeoulPlaceCache seoulPlaceCache;
 
-    public PageRes<PlaceSummaryResponseDTO> search(Long regionId, List<String> keywordCodes, int page, int size) {
+    public PageRes<PlaceSummaryResponseDTO> search(Long regionId, List<String> keywordCodes, String congestionLevel,
+                                                     int page, int size) {
         PlaceRegionRow region = regionId == null ? null : findRegion(regionId);
         List<String> classificationCodes = resolveClassificationCodes(keywordCodes);
+
+        if (!seoulPlaceCache.isEmpty()) {
+            return paginate(searchFromCache(region, classificationCodes, congestionLevel), page, size);
+        }
 
         Map<String, TourApiCongestionItem> congestionByName = region == null
                 ? Map.of()
@@ -87,6 +99,25 @@ public class PlaceSearchService {
 
     private PlaceRegionRow findRegion(Long regionId) {
         return placeRegionQueryRepository.findById(regionId).orElseThrow(RegionNotFoundException::new);
+    }
+
+    /**
+     * 캐시 스냅샷에서 조회한다. 지역을 지정하지 않아도 자치구명과 혼잡도가 채워지며
+     * 카테고리 필터는 보관해 둔 분류코드로 거르므로 TourAPI를 부르지 않는다.
+     */
+    private List<PlaceSummaryResponseDTO> searchFromCache(PlaceRegionRow region, List<String> classificationCodes,
+                                                           String congestionLevel) {
+        List<CachedPlace> cached = region == null
+                ? seoulPlaceCache.findAll()
+                : seoulPlaceCache.findByDistrictName(region.districtName());
+        Set<String> wantedCodes = classificationCodes.stream().filter(Objects::nonNull).collect(Collectors.toSet());
+        return cached.stream()
+                .filter(place -> wantedCodes.isEmpty() || wantedCodes.contains(place.classificationLevel2Code()))
+                .map(place -> PlaceSummaryResponseDTO.of(place.contentId(), place.title(), place.districtName(),
+                        place.imageUrl(), toGrade(place.concentrationRate()), place.concentrationRate()))
+                .filter(summary -> congestionLevel == null
+                        || congestionLevel.equals(summary.congestion().level()))
+                .toList();
     }
 
     /**
