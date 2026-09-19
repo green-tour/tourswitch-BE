@@ -103,7 +103,8 @@ public class VoteService {
 
         List<CandidateTallyResponseDTO> candidateTallies = candidates.stream()
                 .map(candidate -> CandidateTallyResponseDTO.of(candidate.getId(), candidate.getContentId(),
-                        candidate.getTitleSnapshot(), candidate.getImageUrlSnapshot(), candidate.getDisplayOrder(),
+                        candidate.getTitleSnapshot(), candidate.getImageUrlSnapshot(), candidate.getKeywordId(),
+                        candidate.getDisplayOrder(),
                         voteCountByCandidateId.getOrDefault(candidate.getId(), 0L)))
                 .toList();
 
