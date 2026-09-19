@@ -109,3 +109,15 @@ seoul-open-api:
   collection-enabled: ${SEOUL_CROWD_COLLECTION_ENABLED:true}
   collection-initial-delay-ms: ${SEOUL_CROWD_COLLECTION_INITIAL_DELAY_MS:10000}
   collection-delay-ms: ${SEOUL_CROWD_COLLECTION_DELAY_MS:600000}
+
+# 자치구별 관광지 목록 캐시. 한 번 갱신에 areaBasedList2 100회(25구 x 유형 4개)와
+# 집중률 25회를 사용하므로 TourAPI 일일 한도에 맞춰 ttl-minutes를 조정한다.
+# 파드마다 캐시를 따로 들고 있어 실제 호출량은 레플리카 수만큼 곱해진다.
+#
+# 기본값 720(12시간)은 개발계정 1,000회 기준이다. 레플리카 2개에서 하루 400회를 쓰고
+# 나머지는 방 생성과 상세 조회 몫으로 남는다.
+# 운영계정 10만회 승인 후에는 PLACE_CACHE_TTL_MINUTES=30으로 올린다(레플리카 2개 기준 하루 9,600회).
+place-cache:
+  enabled: ${PLACE_CACHE_ENABLED:true}
+  ttl-minutes: ${PLACE_CACHE_TTL_MINUTES:720}
+  initial-delay-minutes: ${PLACE_CACHE_INITIAL_DELAY_MINUTES:1}
