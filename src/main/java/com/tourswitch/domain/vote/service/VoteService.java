@@ -144,7 +144,8 @@ public class VoteService {
                 .map(candidate -> CandidateTallyResponseDTO.of(candidate.getId(), candidate.getContentId(),
                         candidate.getTitleSnapshot(), candidate.getImageUrlSnapshot(), candidate.getKeywordId(),
                         candidate.getDisplayOrder(),
-                        voteCountByCandidateId.getOrDefault(candidate.getId(), 0L)))
+                        voteCountByCandidateId.getOrDefault(candidate.getId(), 0L),
+                        candidate.getConcentrationRateSnapshot(), candidate.getConcentrationGradeSnapshot()))
                 .toList();
 
         List<ParticipantStatusResponseDTO> participantStatuses = roomParticipantQueryRepository

@@ -60,6 +60,7 @@ dependencies {
 	runtimeOnly 'com.mysql:mysql-connector-j'
 
 	// junit
+	testImplementation 'org.springframework.boot:spring-boot-webmvc-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 

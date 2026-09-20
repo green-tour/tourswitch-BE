@@ -1,5 +1,7 @@
 package com.tourswitch.domain.vote.controller;
 
+import com.tourswitch.global.security.principal.UserPrincipal;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import com.tourswitch.domain.vote.request.CompletionRequestDTO;
 import com.tourswitch.domain.vote.response.VoteTallyResponseDTO;
 import com.tourswitch.domain.vote.service.VoteService;
@@ -13,13 +15,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * memberId를 요청 파라미터로 받는 것은 임시 조치다. 회원 도메인의 JWT 인증이 배선되면
- * SecurityContext에서 인증 주체를 꺼내는 방식으로 교체해야 한다(계획 문서 6절-1, 6절-3 경계).
- */
 @RestController
 @RequestMapping("/api/rooms/{roomId}")
 @RequiredArgsConstructor
@@ -30,22 +27,22 @@ public class VoteController {
     @PutMapping("/votes/{candidateId}")
     public GlobalRes<VoteTallyResponseDTO> selectCandidate(@PathVariable Long roomId,
                                                             @PathVariable Long candidateId,
-                                                            @RequestParam Long memberId) {
-        return GlobalRes.success(voteService.selectCandidate(roomId, candidateId, memberId));
+                                                            @AuthenticationPrincipal UserPrincipal principal) {
+        return GlobalRes.success(voteService.selectCandidate(roomId, candidateId, principal.memberId()));
     }
 
     @DeleteMapping("/votes/{candidateId}")
     public GlobalRes<VoteTallyResponseDTO> cancelVote(@PathVariable Long roomId,
                                                        @PathVariable Long candidateId,
-                                                       @RequestParam Long memberId) {
-        return GlobalRes.success(voteService.cancelVote(roomId, candidateId, memberId));
+                                                       @AuthenticationPrincipal UserPrincipal principal) {
+        return GlobalRes.success(voteService.cancelVote(roomId, candidateId, principal.memberId()));
     }
 
     @PatchMapping("/participants/me/completion")
     public GlobalRes<VoteTallyResponseDTO> updateCompletion(@PathVariable Long roomId,
                                                              @RequestBody @Valid CompletionRequestDTO request,
-                                                             @RequestParam Long memberId) {
-        return GlobalRes.success(voteService.completeSelection(roomId, memberId, request.completed()));
+                                                             @AuthenticationPrincipal UserPrincipal principal) {
+        return GlobalRes.success(voteService.completeSelection(roomId, principal.memberId(), request.completed()));
     }
 
     /**
@@ -53,12 +50,12 @@ public class VoteController {
      * 관광지 투표 중이면 추가 투표로, 추가 투표 중이면 코스 확정으로 넘어간다.
      */
     @PatchMapping("/close")
-    public GlobalRes<VoteTallyResponseDTO> closeByHost(@PathVariable Long roomId, @RequestParam Long memberId) {
-        return GlobalRes.success(voteService.closeCurrentRoundByHost(roomId, memberId));
+    public GlobalRes<VoteTallyResponseDTO> closeByHost(@PathVariable Long roomId, @AuthenticationPrincipal UserPrincipal principal) {
+        return GlobalRes.success(voteService.closeCurrentRoundByHost(roomId, principal.memberId()));
     }
 
     @GetMapping("/votes/tally")
-    public GlobalRes<VoteTallyResponseDTO> getTally(@PathVariable Long roomId, @RequestParam Long memberId) {
-        return GlobalRes.success(voteService.getTally(roomId, memberId));
+    public GlobalRes<VoteTallyResponseDTO> getTally(@PathVariable Long roomId, @AuthenticationPrincipal UserPrincipal principal) {
+        return GlobalRes.success(voteService.getTally(roomId, principal.memberId()));
     }
 }

@@ -1,5 +1,7 @@
 package com.tourswitch.domain.history.controller;
 
+import com.tourswitch.global.security.principal.UserPrincipal;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import com.tourswitch.domain.course.entity.Course;
 import com.tourswitch.domain.course.response.*;
 import com.tourswitch.domain.course.service.CourseQueryService;
@@ -24,15 +26,15 @@ public class TravelHistoryController {
 
     @GetMapping
     public GlobalRes<PageRes<TravelHistoryItemResponse>> getHistories(
-            @RequestParam Long memberId,
-            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam(defaultValue = "1") @Min(1) int page,
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
-        return GlobalRes.success(travelHistoryService.getHistories(memberId, page, size));
+        return GlobalRes.success(travelHistoryService.getHistories(principal.memberId(), page, size));
     }
 
     @GetMapping("/{courseId}")
-    public GlobalRes<CourseResponseDTO> getHistory(@PathVariable Long courseId, @RequestParam Long memberId) {
-        Course course = courseQueryService.getCourseById(courseId, memberId);
+    public GlobalRes<CourseResponseDTO> getHistory(@PathVariable Long courseId, @AuthenticationPrincipal UserPrincipal principal) {
+        Course course = courseQueryService.getCourseById(courseId, principal.memberId());
         List<CourseSpotResponseDTO> stops = courseQueryService.getStops(courseId).stream()
                 .map(CourseSpotResponseDTO::from).toList();
         List<CourseExtraCandidateResponseDTO> extras = courseQueryService.getExtraCandidates(courseId).stream()

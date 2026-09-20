@@ -88,7 +88,7 @@ public class PlaceSearchService {
         PlaceRegionRow region = regionId == null ? null : findRegion(regionId);
         BigDecimal concentrationRate = null;
         if (region != null) {
-            TourApiCongestionItem congestion = fetchCongestionByName(region, LocalDate.now()).get(detail.title());
+            TourApiCongestionItem congestion = fetchCongestionByName(region, LocalDate.now()).get(SpotNameMatcher.key(detail.title()));
             concentrationRate = congestion == null ? null : congestion.concentrationRate();
         }
         return PlaceDetailResponseDTO.of(detail.contentId(), detail.title(),
@@ -144,8 +144,10 @@ public class PlaceSearchService {
         Map<String, TourApiCongestionItem> byName = new LinkedHashMap<>();
         for (TourApiCongestionItem item : tatsCnctrRateClient.tatsCnctrRatedList(region.legalDongAreaCode(),
                 region.districtCode())) {
-            if (targetBaseYmd.equals(item.baseYmd())) {
-                byName.put(item.touristSpotName(), item);
+            String nameKey = SpotNameMatcher.key(item.touristSpotName());
+            // 이름 없는 항목을 빈 키로 넣으면 이름 없는 장소가 전부 그 혼잡도에 붙는다.
+            if (!nameKey.isEmpty() && targetBaseYmd.equals(item.baseYmd())) {
+                byName.put(nameKey, item);
             }
         }
         return byName;
@@ -153,7 +155,7 @@ public class PlaceSearchService {
 
     private PlaceSummaryResponseDTO toSummary(TourApiSpotItem item, PlaceRegionRow region,
                                                Map<String, TourApiCongestionItem> congestionByName) {
-        TourApiCongestionItem congestion = congestionByName.get(item.title());
+        TourApiCongestionItem congestion = congestionByName.get(SpotNameMatcher.key(item.title()));
         BigDecimal concentrationRate = congestion == null ? null : congestion.concentrationRate();
         return PlaceSummaryResponseDTO.of(item.contentId(), item.title(),
                 region == null ? null : region.districtName(), item.firstImageUrl(), toGrade(concentrationRate),

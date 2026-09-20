@@ -95,6 +95,10 @@ public class CourseExtraCandidateQueryRepository {
                 continue;
             }
             previousRole = role;
+            // 아무도 고르지 않은 역할은 거리순으로 임의 확정하지 않고 비워 둔다.
+            if (((Number) row[2]).longValue() == 0L) {
+                continue;
+            }
             winners.add(((Number) row[1]).longValue());
         }
         return winners;

@@ -1,5 +1,7 @@
 package com.tourswitch.domain.realtimechange.controller;
 
+import com.tourswitch.global.security.principal.UserPrincipal;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import com.tourswitch.domain.realtimechange.request.CourseSpotReplacementRequestDTO;
 import com.tourswitch.domain.realtimechange.response.AdministrativeDongResponseDTO;
 import com.tourswitch.domain.realtimechange.response.CourseReplacementResponseDTO;
@@ -22,9 +24,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * memberId 요청 파라미터는 회원/JWT 도메인이 연결되기 전까지 사용하는 임시 경계다.
- */
 @Validated
 @RestController
 @RequestMapping("/api")
@@ -48,18 +47,18 @@ public class RealtimeChangeController {
     public GlobalRes<ReplacementCandidatesResponseDTO> getReplacementCandidates(
             @PathVariable Long courseId,
             @RequestParam Long administrativeDongId,
-            @RequestParam Long memberId,
+            @AuthenticationPrincipal UserPrincipal principal,
             @RequestParam(defaultValue = "20") @Min(1) @Max(50) int limit) {
         return GlobalRes.success(realtimeChangeQueryService.getReplacementCandidates(
-                courseId, administrativeDongId, memberId, limit));
+                courseId, administrativeDongId, principal.memberId(), limit));
     }
 
     @PatchMapping("/courses/{courseId}/spots/{courseSpotId}/replacement")
     public GlobalRes<CourseReplacementResponseDTO> replaceCourseSpot(
             @PathVariable Long courseId,
             @PathVariable Long courseSpotId,
-            @RequestParam Long memberId,
+            @AuthenticationPrincipal UserPrincipal principal,
             @RequestBody @Valid CourseSpotReplacementRequestDTO request) {
-        return GlobalRes.success(courseReplacementService.replace(courseId, courseSpotId, memberId, request));
+        return GlobalRes.success(courseReplacementService.replace(courseId, courseSpotId, principal.memberId(), request));
     }
 }
