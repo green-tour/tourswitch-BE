@@ -23,7 +23,9 @@ public class TatsCnctrRateClient {
 
     private static final String MOBILE_OS = "ETC";
     private static final String MOBILE_APP = "TourSwitch";
-    private static final int PAGE_SIZE = 100;
+    // TourAPI는 numOfRows 상한이 넉넉하다. 100으로 잘게 끊으면 자치구 하나에 수십 번씩 불러
+    // 일일 호출 한도를 빠르게 소진한다(집중률 기준 201회 -> 30회).
+    private static final int PAGE_SIZE = 1000;
 
     private final RestClient tourApiRestClient;
     private final TourApiProperties properties;

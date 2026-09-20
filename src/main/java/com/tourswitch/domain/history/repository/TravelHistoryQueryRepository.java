@@ -30,7 +30,7 @@ public class TravelHistoryQueryRepository {
                 """)
                 .setParameter("memberId", memberId)
                 .setParameter("size", size)
-                .setParameter("offset", page * size)
+                .setParameter("offset", (page - 1) * size)
                 .getResultList();
 
         return rows.stream().map(row -> new TravelHistoryRow(

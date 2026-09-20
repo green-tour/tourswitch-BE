@@ -18,6 +18,6 @@ public class TravelHistoryService {
         var items = queryRepository.findHistories(memberId, page, size).stream()
                 .map(TravelHistoryItemResponse::from)
                 .toList();
-        return new PageRes<>(items, totalCount, page, size, (long) (page + 1) * size < totalCount);
+        return new PageRes<>(items, totalCount, page, size, (long) page * size < totalCount);
     }
 }

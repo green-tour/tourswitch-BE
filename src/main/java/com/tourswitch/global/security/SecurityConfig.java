@@ -87,8 +87,16 @@ public class SecurityConfig {
                     ).permitAll()
 
                     .requestMatchers(
+                        HttpMethod.GET,
+                        "/api/invites/*"
+                    ).permitAll()
+
+                    .requestMatchers(
                         "/api/users/me",
-                        "/api/auth/logout"
+                        "/api/auth/logout",
+                        "/api/rooms/**",
+                        "/api/courses/**",
+                        "/api/invites/**"
                     ).authenticated()
 
                     .anyRequest().permitAll()
