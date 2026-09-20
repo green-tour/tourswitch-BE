@@ -1,5 +1,6 @@
 package com.tourswitch.domain.vote.service;
 
+import com.tourswitch.domain.vote.response.ExtraCandidateTallyResponseDTO;
 import com.tourswitch.domain.course.repository.CourseExtraCandidateQueryRepository;
 import com.tourswitch.domain.course.service.CourseGenerationService;
 import com.tourswitch.domain.course.service.ExtraVoteService;
@@ -59,7 +60,7 @@ public class VoteService {
             }
         }
 
-        return buildTally(travelRoomId);
+        return buildTally(travelRoomId, memberId);
     }
 
     @Transactional
@@ -71,7 +72,7 @@ public class VoteService {
         roomVoteRepository.findByRoomCandidateIdAndMemberId(candidateId, memberId)
                 .ifPresent(roomVoteRepository::delete);
 
-        return buildTally(travelRoomId);
+        return buildTally(travelRoomId, memberId);
     }
 
     @Transactional
@@ -85,7 +86,7 @@ public class VoteService {
             closeVotingRound(travelRoomId);
         }
 
-        return buildTally(travelRoomId);
+        return buildTally(travelRoomId, memberId);
     }
 
     /**
@@ -121,15 +122,15 @@ public class VoteService {
         } else {
             throw new VoteSessionNotActiveException("이미 종료된 세션입니다.");
         }
-        return buildTally(travelRoomId);
+        return buildTally(travelRoomId, memberId);
     }
 
     public VoteTallyResponseDTO getTally(Long travelRoomId, Long memberId) {
         requireParticipant(travelRoomId, memberId);
-        return buildTally(travelRoomId);
+        return buildTally(travelRoomId, memberId);
     }
 
-    private VoteTallyResponseDTO buildTally(Long travelRoomId) {
+    private VoteTallyResponseDTO buildTally(Long travelRoomId, Long memberId) {
         List<RoomCandidate> candidates = roomCandidateRepository.findByTravelRoomIdOrderByDisplayOrderAsc(
                 travelRoomId);
         List<Long> candidateIds = candidates.stream().map(RoomCandidate::getId).toList();
@@ -153,8 +154,16 @@ public class VoteService {
                 .map(ParticipantStatusResponseDTO::from)
                 .toList();
 
+        // 추가 투표 라운드의 부가 후보도 같은 화면의 실시간 순위에 올린다.
+        // 라운드 전에는 후보가 없어 빈 목록이 된다.
+        List<ExtraCandidateTallyResponseDTO> extraCandidateTallies = courseExtraCandidateQueryRepository
+                .findByTravelRoomId(travelRoomId, memberId).stream()
+                .map(row -> new ExtraCandidateTallyResponseDTO(row.id(), row.contentId(), row.spotRole(),
+                        row.title(), row.imageUrl(), row.distanceMeters(), row.voteCount(), row.isSelected(), row.myVote()))
+                .toList();
+
         String roomStatus = travelRoomStatusQueryRepository.findStatus(travelRoomId);
-        return VoteTallyResponseDTO.of(roomStatus, candidateTallies, participantStatuses);
+        return VoteTallyResponseDTO.of(roomStatus, candidateTallies, extraCandidateTallies, participantStatuses);
     }
 
     private void requireVotingSession(Long travelRoomId) {

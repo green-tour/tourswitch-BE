@@ -186,7 +186,7 @@ CREATE TABLE `travel_room` (
   KEY `fk_travel_room_region` (`region_id`),
   CONSTRAINT `fk_travel_room_host_member` FOREIGN KEY (`host_member_id`) REFERENCES `member` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_travel_room_region` FOREIGN KEY (`region_id`) REFERENCES `region` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
-  CONSTRAINT `travel_room_chk_1` CHECK ((`course_spot_count` between 3 and 6)),
+  CONSTRAINT `travel_room_chk_1` CHECK ((`course_spot_count` between 1 and 3)),
   CONSTRAINT `travel_room_chk_2` CHECK ((`status` in (_utf8mb4'VOTING',_utf8mb4'EXTRA_VOTING',_utf8mb4'CLOSED',_utf8mb4'COURSE_CONFIRMED')))
 ) ENGINE=InnoDB AUTO_INCREMENT=53 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='여행 한 번에 방 하나. 영구 보존(7.1절 보존정책 확정, 9차 검수)';
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -319,4 +319,3 @@ CREATE TABLE `seoul_realtime_population` (
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
-
