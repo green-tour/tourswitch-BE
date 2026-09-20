@@ -26,6 +26,11 @@ final class TourApiResponseParser {
         } catch (Exception e) {
             throw new TourApiClientException(CustomResponseCode.HTTP_ERROR, "TourAPI 응답을 파싱하지 못했습니다.");
         }
+        // 게이트웨이가 5xx를 낼 때 본문이 비어 오기도 한다. 빈 본문을 그냥 흘리면
+        // 아래에서 resultCode를 못 찾아 원인을 알 수 없는 오류로 뭉개진다.
+        if (root == null || root.isMissingNode() || root.isNull()) {
+            throw new TourApiClientException(CustomResponseCode.HTTP_ERROR, "TourAPI 응답이 비어 있습니다.");
+        }
 
         if (root.has("OpenAPI_ServiceResponse")) {
             JsonNode header = root.path("OpenAPI_ServiceResponse").path("cmmMsgHeader");
