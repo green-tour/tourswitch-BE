@@ -50,6 +50,8 @@ CREATE TABLE `course_extra_candidate` (
   `course_id` bigint NOT NULL,
   `anchor_course_spot_id` bigint NOT NULL COMMENT '기준이 된 코스 경유지',
   `content_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `title_snapshot` varchar(200) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `image_url_snapshot` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `spot_role` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
   `distance_meters` int NOT NULL,
   `display_order` int NOT NULL,
@@ -149,6 +151,7 @@ CREATE TABLE `room_participant` (
   `member_id` bigint NOT NULL,
   `is_host` tinyint(1) NOT NULL,
   `is_selection_completed` tinyint(1) NOT NULL DEFAULT '0',
+  `is_extra_selection_completed` tinyint(1) NOT NULL DEFAULT '0',
   `completed_at` datetime DEFAULT NULL,
   `joined_at` datetime NOT NULL,
   PRIMARY KEY (`id`),
@@ -184,7 +187,7 @@ CREATE TABLE `travel_room` (
   CONSTRAINT `fk_travel_room_host_member` FOREIGN KEY (`host_member_id`) REFERENCES `member` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_travel_room_region` FOREIGN KEY (`region_id`) REFERENCES `region` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `travel_room_chk_1` CHECK ((`course_spot_count` between 3 and 6)),
-  CONSTRAINT `travel_room_chk_2` CHECK ((`status` in (_utf8mb4'VOTING',_utf8mb4'CLOSED',_utf8mb4'COURSE_CONFIRMED')))
+  CONSTRAINT `travel_room_chk_2` CHECK ((`status` in (_utf8mb4'VOTING',_utf8mb4'EXTRA_VOTING',_utf8mb4'CLOSED',_utf8mb4'COURSE_CONFIRMED')))
 ) ENGINE=InnoDB AUTO_INCREMENT=53 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='여행 한 번에 방 하나. 영구 보존(7.1절 보존정책 확정, 9차 검수)';
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;

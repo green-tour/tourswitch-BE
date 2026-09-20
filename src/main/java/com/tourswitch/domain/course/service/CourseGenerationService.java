@@ -13,6 +13,7 @@ import com.tourswitch.domain.vote.repository.TravelRoomStatusQueryRepository;
 import com.tourswitch.domain.vote.repository.TravelRoomStatusQueryRepository.RoomSettings;
 import com.tourswitch.domain.vote.service.CourseSelectionCandidate;
 import com.tourswitch.domain.vote.service.VoteResultQueryService;
+import com.tourswitch.global.spatial.HaversineCalculator;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -154,8 +155,8 @@ public class CourseGenerationService {
                 for (Map.Entry<SpotRole, List<NearbySpotRow>> entry : byRole.entrySet()) {
                     int displayOrder = 1;
                     for (NearbySpotRow row : entry.getValue()) {
-                        extras.add(CourseExtraCandidate.create(course, anchor, row.contentId(), entry.getKey(),
-                                row.distanceMeters(), displayOrder++));
+                        extras.add(CourseExtraCandidate.create(course, anchor, row.contentId(), row.title(),
+                                row.imageUrl(), entry.getKey(), row.distanceMeters(), displayOrder++));
                     }
                 }
             }

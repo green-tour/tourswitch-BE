@@ -48,6 +48,15 @@ public class VoteController {
         return GlobalRes.success(voteService.completeSelection(roomId, memberId, request.completed()));
     }
 
+    /**
+     * 방장이 남은 참여자를 기다리지 않고 현재 라운드를 끝낸다.
+     * 관광지 투표 중이면 추가 투표로, 추가 투표 중이면 코스 확정으로 넘어간다.
+     */
+    @PatchMapping("/close")
+    public GlobalRes<VoteTallyResponseDTO> closeByHost(@PathVariable Long roomId, @RequestParam Long memberId) {
+        return GlobalRes.success(voteService.closeCurrentRoundByHost(roomId, memberId));
+    }
+
     @GetMapping("/votes/tally")
     public GlobalRes<VoteTallyResponseDTO> getTally(@PathVariable Long roomId, @RequestParam Long memberId) {
         return GlobalRes.success(voteService.getTally(roomId, memberId));
