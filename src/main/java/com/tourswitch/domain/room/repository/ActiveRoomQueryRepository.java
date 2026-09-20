@@ -17,6 +17,7 @@ public class ActiveRoomQueryRepository {
         @SuppressWarnings("unchecked")
         List<Object[]> rows = entityManager.createNativeQuery("""
                 SELECT tr.id, tr.room_name, tr.travel_date, tr.region_id, r.district_name, tr.status,
+                       tr.host_member_id,
                        COUNT(all_rp.id),
                        COALESCE(SUM(CASE WHEN all_rp.is_selection_completed = TRUE THEN 1 ELSE 0 END), 0)
                 FROM room_participant member_rp
@@ -24,8 +25,9 @@ public class ActiveRoomQueryRepository {
                 JOIN region r ON r.id = tr.region_id
                 JOIN room_participant all_rp ON all_rp.travel_room_id = tr.id
                 WHERE member_rp.member_id = :memberId
-                  AND tr.status = 'VOTING'
-                GROUP BY tr.id, tr.room_name, tr.travel_date, tr.region_id, r.district_name, tr.status, tr.created_at
+                  AND tr.status IN ('VOTING', 'EXTRA_VOTING')
+                GROUP BY tr.id, tr.room_name, tr.travel_date, tr.region_id, r.district_name, tr.status,
+                         tr.host_member_id, tr.created_at
                 ORDER BY tr.created_at DESC, tr.id DESC
                 LIMIT 1
                 """)
@@ -36,7 +38,7 @@ public class ActiveRoomQueryRepository {
         }
         Object[] row = rows.getFirst();
         return Optional.of(new ActiveRoomRow(number(row[0]), (String) row[1], date(row[2]), number(row[3]),
-                (String) row[4], (String) row[5], count(row[6]), count(row[7])));
+                (String) row[4], (String) row[5], number(row[6]), count(row[7]), count(row[8])));
     }
 
     @SuppressWarnings("unchecked")
