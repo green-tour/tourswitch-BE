@@ -16,6 +16,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.ToDoubleFunction;
 import lombok.RequiredArgsConstructor;
@@ -127,6 +128,21 @@ public class SeoulPlaceCache {
 
     public boolean isEmpty() {
         return placesByDistrictName.isEmpty();
+    }
+
+    /**
+     * 장소가 속한 자치구명. 상세 조회는 자치구를 알아야 혼잡도를 붙일 수 있는데,
+     * 링크로 바로 들어오면 호출자가 그 값을 모른다. 캐시가 이미 알고 있으니 여기서 찾는다.
+     */
+    public Optional<String> findDistrictNameByContentId(String contentId) {
+        if (contentId == null) {
+            return Optional.empty();
+        }
+        return placesByDistrictName.entrySet().stream()
+                .filter(entry -> entry.getValue().stream()
+                        .anyMatch(place -> contentId.equals(place.contentId())))
+                .map(Map.Entry::getKey)
+                .findFirst();
     }
 
     /**
