@@ -1,5 +1,6 @@
 package com.tourswitch.domain.vote.repository;
 
+import com.tourswitch.global.spatial.SpotNameMatcher;
 import com.tourswitch.global.client.tourapi.KorServiceClient;
 import com.tourswitch.global.client.tourapi.TatsCnctrRateClient;
 import com.tourswitch.global.client.tourapi.TourApiCongestionItem;
@@ -58,7 +59,7 @@ public class CandidateSpotPoolQueryRepository {
         for (TourApiCongestionItem item : tatsCnctrRateClient.tatsCnctrRatedList(region.legalDongAreaCode(),
                 region.districtCode())) {
             if (targetBaseYmd.equals(item.baseYmd())) {
-                byName.put(item.touristSpotName(), item);
+                byName.put(SpotNameMatcher.key(item.touristSpotName()), item);
             }
         }
         return byName;
@@ -66,7 +67,7 @@ public class CandidateSpotPoolQueryRepository {
 
     private CandidateSpotRow toRow(TourApiSpotItem item, Long keywordId,
                                     Map<String, TourApiCongestionItem> congestionByName) {
-        TourApiCongestionItem congestion = congestionByName.get(item.title());
+        TourApiCongestionItem congestion = congestionByName.get(SpotNameMatcher.key(item.title()));
         BigDecimal concentrationRate = congestion == null ? null : congestion.concentrationRate();
         String concentrationGrade = toGrade(concentrationRate);
         return new CandidateSpotRow(item.contentId(), item.title(), item.firstImageUrl(), item.latitude(),
