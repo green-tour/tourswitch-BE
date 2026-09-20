@@ -27,7 +27,9 @@ public class ActiveRoomQueryRepository {
                 WHERE member_rp.member_id = :memberId
                   AND (
                       tr.status IN ('VOTING', 'EXTRA_VOTING')
-                      OR (tr.status = 'COURSE_CONFIRMED' AND tr.travel_date >= CURRENT_DATE)
+                      -- CLOSED는 투표가 끝났지만 코스를 아직 확정하지 않은 상태다. 여행 기록은
+                      -- 지난 여행만 담으므로, 여기서 빼면 확정하러 돌아갈 길이 사라진다.
+                      OR (tr.status IN ('CLOSED', 'COURSE_CONFIRMED') AND tr.travel_date >= CURRENT_DATE)
                   )
                 GROUP BY tr.id, tr.room_name, tr.travel_date, tr.region_id, r.district_name, tr.status,
                          tr.host_member_id, tr.created_at
