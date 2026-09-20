@@ -113,7 +113,7 @@ public class RoomParticipantQueryRepository {
     @SuppressWarnings("unchecked")
     public List<ParticipantCompletionRow> findParticipantCompletions(Long travelRoomId) {
         List<Object[]> rows = entityManager.createNativeQuery("""
-                SELECT member_id, is_selection_completed, completed_at
+                SELECT member_id, is_selection_completed, is_extra_selection_completed, completed_at
                 FROM room_participant WHERE travel_room_id = :travelRoomId
                 """)
                 .setParameter("travelRoomId", travelRoomId)
@@ -123,7 +123,8 @@ public class RoomParticipantQueryRepository {
                 .map(row -> new ParticipantCompletionRow(
                         ((Number) row[0]).longValue(),
                         (Boolean) row[1],
-                        (LocalDateTime) row[2]))
+                        (Boolean) row[2],
+                        (LocalDateTime) row[3]))
                 .toList();
     }
 }

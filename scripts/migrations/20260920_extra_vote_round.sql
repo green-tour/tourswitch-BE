@@ -21,9 +21,18 @@ ALTER TABLE travel_room
 
 -- 2. 부가 후보 카드에 노출할 이름·이미지 스냅샷.
 --    설명은 목록 응답에 없어 사용자가 후보를 고를 때 상세 조회로 채운다.
-ALTER TABLE course_extra_candidate
-    ADD COLUMN title_snapshot VARCHAR(200) NULL AFTER content_id,
-    ADD COLUMN image_url_snapshot VARCHAR(500) NULL AFTER title_snapshot;
+--    base_schema에도 같은 컬럼을 반영해 두었으므로, 그 스키마로 만든 DB에서는 건너뛴다.
+SET @sql := IF(
+    (SELECT COUNT(*) FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'course_extra_candidate'
+        AND COLUMN_NAME = 'title_snapshot') = 0,
+    'ALTER TABLE course_extra_candidate
+        ADD COLUMN title_snapshot VARCHAR(200) NULL AFTER content_id,
+        ADD COLUMN image_url_snapshot VARCHAR(500) NULL AFTER title_snapshot',
+    'DO 0');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- 3. 추가 투표 기록. 참여자 한 명이 후보 하나에 한 표만 던진다.
 CREATE TABLE IF NOT EXISTS course_extra_vote (
@@ -41,8 +50,16 @@ CREATE TABLE IF NOT EXISTS course_extra_vote (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='추가 투표 라운드의 참여자별 선택';
 
 -- 4. 라운드가 둘이므로 완료 플래그를 라운드별로 구분한다.
-ALTER TABLE room_participant
-    ADD COLUMN is_extra_selection_completed TINYINT(1) NOT NULL DEFAULT 0 AFTER is_selection_completed;
+SET @sql := IF(
+    (SELECT COUNT(*) FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'room_participant'
+        AND COLUMN_NAME = 'is_extra_selection_completed') = 0,
+    'ALTER TABLE room_participant
+        ADD COLUMN is_extra_selection_completed TINYINT(1) NOT NULL DEFAULT 0 AFTER is_selection_completed',
+    'DO 0');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 SELECT
     (SELECT CHECK_CLAUSE FROM information_schema.CHECK_CONSTRAINTS
