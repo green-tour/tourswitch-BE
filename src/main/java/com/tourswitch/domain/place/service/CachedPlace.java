@@ -15,6 +15,7 @@ public record CachedPlace(
         String title,
         String imageUrl,
         String districtName,
+        String address,
         String classificationLevel2Code,
         double latitude,
         double longitude,

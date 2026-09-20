@@ -68,4 +68,22 @@ public class AdministrativeDong {
     public void deactivate() {
         this.isActive = false;
     }
+
+    public void activate() {
+        this.isActive = true;
+    }
+
+    /**
+     * 대표 좌표를 새 값으로 맞춘다. 실제로 바뀐 경우에만 true를 돌려줘, 변화 없는 갱신을
+     * 집계에서 걸러낼 수 있게 한다.
+     */
+    public boolean relocate(BigDecimal centerLatitude, BigDecimal centerLongitude) {
+        if (this.centerLatitude.compareTo(centerLatitude) == 0
+                && this.centerLongitude.compareTo(centerLongitude) == 0) {
+            return false;
+        }
+        this.centerLatitude = centerLatitude;
+        this.centerLongitude = centerLongitude;
+        return true;
+    }
 }

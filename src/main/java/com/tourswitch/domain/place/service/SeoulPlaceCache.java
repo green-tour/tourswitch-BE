@@ -1,5 +1,7 @@
 package com.tourswitch.domain.place.service;
 
+import com.tourswitch.global.spatial.DongNameExtractor;
+import com.tourswitch.global.spatial.SpotNameMatcher;
 import com.tourswitch.domain.place.repository.PlaceRegionQueryRepository;
 import com.tourswitch.domain.place.repository.PlaceRegionRow;
 import com.tourswitch.global.client.tourapi.KorServiceClient;
@@ -15,8 +17,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.ToDoubleFunction;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -45,6 +49,7 @@ public class SeoulPlaceCache {
     private final TatsCnctrRateClient tatsCnctrRateClient;
     private final PlaceRegionQueryRepository placeRegionQueryRepository;
     private final PlaceCacheProperties properties;
+    private final ApplicationEventPublisher eventPublisher;
 
     private volatile Map<String, List<CachedPlace>> placesByDistrictName = Map.of();
 
@@ -68,10 +73,20 @@ public class SeoulPlaceCache {
             log.warn("자치구 장소 캐시 갱신 결과가 비어 있어 기존 스냅샷을 유지한다.");
             return;
         }
-        placesByDistrictName = Map.copyOf(collected);
-        log.info("자치구 장소 캐시 갱신 완료. 자치구={}건, 실패={}건, 장소={}건",
-                collected.size(), failedDistrictCount,
-                collected.values().stream().mapToInt(List::size).sum());
+        // 실패한 자치구는 직전 스냅샷을 그대로 둔다. 새로 받은 것만 덮지 않으면
+        // 호출 한도에 걸려 일부만 받은 날 캐시가 통째로 줄어든다.
+        Map<String, List<CachedPlace>> merged = new LinkedHashMap<>(placesByDistrictName);
+        merged.putAll(collected);
+        placesByDistrictName = Map.copyOf(merged);
+        log.info("자치구 장소 캐시 갱신 완료. 갱신={}건, 실패={}건, 보유 자치구={}건, 장소={}건",
+                collected.size(), failedDistrictCount, merged.size(),
+                merged.values().stream().mapToInt(List::size).sum());
+        // 캐시는 이미 갱신했다. 파생 기준정보 동기화가 실패해도 갱신 자체를 실패로 만들지 않는다.
+        try {
+            eventPublisher.publishEvent(new PlaceCacheRefreshedEvent());
+        } catch (RuntimeException exception) {
+            log.warn("장소 캐시 갱신 후처리에 실패했다. 캐시 스냅샷은 유지된다.", exception);
+        }
     }
 
     /**
@@ -114,6 +129,31 @@ public class SeoulPlaceCache {
         return placesByDistrictName.isEmpty();
     }
 
+    /**
+     * 자치구 안의 동별 대표 좌표. TourAPI가 동 단위 기준정보를 주지 않아, 이미 받아 둔 장소들의
+     * 주소에서 동을 뽑고 그 장소들의 좌표를 평균해서 만든다.
+     *
+     * 기하학적 중심이 아니라 관광지가 모여 있는 지점이라, 반경으로 대체 후보를 찾는 용도에 맞는다.
+     */
+    public List<DongCentroid> findDongCentroids(String districtName) {
+        Map<String, List<CachedPlace>> byDong = new LinkedHashMap<>();
+        for (CachedPlace place : placesByDistrictName.getOrDefault(districtName, List.of())) {
+            DongNameExtractor.extract(place.address())
+                    .ifPresent(dong -> byDong.computeIfAbsent(dong, key -> new ArrayList<>()).add(place));
+        }
+        return byDong.entrySet().stream()
+                .map(entry -> new DongCentroid(entry.getKey(),
+                        average(entry.getValue(), CachedPlace::latitude),
+                        average(entry.getValue(), CachedPlace::longitude),
+                        entry.getValue().size()))
+                .sorted(Comparator.comparing(DongCentroid::dongName))
+                .toList();
+    }
+
+    private static double average(List<CachedPlace> places, ToDoubleFunction<CachedPlace> value) {
+        return places.stream().mapToDouble(value).average().orElseThrow();
+    }
+
     private static boolean isSearchable(CachedPlace place) {
         return place.contentTypeId() != null && SEARCHABLE_CONTENT_TYPE_IDS.contains(place.contentTypeId());
     }
@@ -127,7 +167,7 @@ public class SeoulPlaceCache {
                 TourApiCongestionItem congestion = congestionByName.get(SpotNameMatcher.key(item.title()));
                 firstMatchByContentId.putIfAbsent(item.contentId(), new CachedPlace(
                         item.contentId(), item.contentTypeId(), item.title(), item.firstImageUrl(),
-                        region.districtName(), item.classificationLevel2Code(),
+                        region.districtName(), item.address(), item.classificationLevel2Code(),
                         item.latitude(), item.longitude(),
                         congestion == null ? null : congestion.concentrationRate()));
             }

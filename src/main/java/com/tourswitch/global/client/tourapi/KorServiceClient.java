@@ -6,9 +6,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -18,7 +15,6 @@ import org.springframework.web.util.UriComponentsBuilder;
  * 로컬 DB(tourist_spot 등) 캐시를 두지 않고 매 호출마다 API를 부른다(계획 문서 2절 전환 원칙).
  */
 @Component
-@RequiredArgsConstructor
 public class KorServiceClient {
 
     private static final String MOBILE_OS = "ETC";
@@ -29,7 +25,14 @@ public class KorServiceClient {
 
     private final RestClient tourApiRestClient;
     private final TourApiProperties properties;
+    private final TourApiKeyPool keyPool;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    public KorServiceClient(RestClient tourApiRestClient, TourApiProperties properties) {
+        this.tourApiRestClient = tourApiRestClient;
+        this.properties = properties;
+        this.keyPool = new TourApiKeyPool("KorService2", properties.korService().serviceKeys());
+    }
 
     public List<TourApiSpotItem> areaBasedList2(String legalDongRegionCode, String legalDongDistrictCode,
                                                  int contentTypeId, String classificationLevel2Code) {
@@ -58,12 +61,22 @@ public class KorServiceClient {
     }
 
     public Optional<TourApiSpotDetail> detailCommon2(String contentId) {
-        String raw = tourApiRestClient.get()
-                .uri(buildUri("/KorService2/detailCommon2", Map.of("contentId", contentId)))
-                .retrieve()
-                .body(String.class);
-        JsonNode body = TourApiResponseParser.parseBody(objectMapper, raw);
+        JsonNode body = get("/KorService2/detailCommon2", Map.of("contentId", contentId));
         return TourApiResponseParser.mapItems(body, TourApiSpotDetail::from).stream().findFirst();
+    }
+
+    /**
+     * 키가 한도에 걸리면 다음 키로 같은 요청을 다시 보낸다. 페이지 단위로 감싸므로
+     * 여러 페이지를 받는 중간에 키가 소진돼도 이미 받은 페이지는 버리지 않는다.
+     */
+    private JsonNode get(String path, Map<String, String> params) {
+        return keyPool.execute(serviceKey -> {
+            String raw = tourApiRestClient.get()
+                    .uri(buildUri(serviceKey, path, params))
+                    .retrieve()
+                    .body(String.class);
+            return TourApiResponseParser.parseBody(objectMapper, raw);
+        });
     }
 
     private List<TourApiSpotItem> fetchAllPages(String path, Map<String, String> params) {
@@ -74,8 +87,7 @@ public class KorServiceClient {
             pageParams.put("numOfRows", String.valueOf(PAGE_SIZE));
             pageParams.put("pageNo", String.valueOf(pageNo));
 
-            String raw = tourApiRestClient.get().uri(buildUri(path, pageParams)).retrieve().body(String.class);
-            JsonNode body = TourApiResponseParser.parseBody(objectMapper, raw);
+            JsonNode body = get(path, pageParams);
             List<TourApiSpotItem> page = TourApiResponseParser.mapItems(body, TourApiSpotItem::from);
             all.addAll(page);
 
@@ -88,17 +100,13 @@ public class KorServiceClient {
         return all;
     }
 
-    private java.net.URI buildUri(String path, Map<String, String> params) {
+    private java.net.URI buildUri(String serviceKey, String path, Map<String, String> params) {
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(properties.baseUrl() + path)
-                .queryParam("serviceKey", decodedServiceKey(properties.korService().serviceKey()))
+                .queryParam("serviceKey", serviceKey)
                 .queryParam("MobileOS", MOBILE_OS)
                 .queryParam("MobileApp", MOBILE_APP)
                 .queryParam("_type", "json");
         params.forEach(builder::queryParam);
         return builder.encode().build().toUri();
-    }
-
-    private String decodedServiceKey(String serviceKey) {
-        return URLDecoder.decode(serviceKey, StandardCharsets.UTF_8);
     }
 }
