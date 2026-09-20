@@ -18,7 +18,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * 부가 카테고리(음식/숙박/쇼핑) 후보 스냅샷. 선택은 방장 단독(계획 문서 5단계).
+ * 부가 카테고리(음식/숙박/쇼핑) 후보 스냅샷.
+ * 관광지 투표가 끝난 뒤 확정 경유지 기준으로 만들어지고, 추가 투표 라운드에서 참여자가 고른다.
+ * title/imageUrl은 카드에 그대로 노출하며 설명은 고를 때 상세 조회로 채운다.
  */
 @Entity
 @Getter
@@ -45,6 +47,12 @@ public class CourseExtraCandidate {
     @Column(name = "content_id", nullable = false, length = 50)
     private String contentId;
 
+    @Column(name = "title_snapshot", length = 200)
+    private String titleSnapshot;
+
+    @Column(name = "image_url_snapshot", length = 500)
+    private String imageUrlSnapshot;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "spot_role", nullable = false, length = 20)
     private SpotRole spotRole;
@@ -58,11 +66,14 @@ public class CourseExtraCandidate {
     @Column(name = "is_selected", nullable = false)
     private Boolean isSelected;
 
-    private CourseExtraCandidate(Course course, CourseSpot anchorCourseSpot, String contentId, SpotRole spotRole,
-                                  Integer distanceMeters, Integer displayOrder) {
+    private CourseExtraCandidate(Course course, CourseSpot anchorCourseSpot, String contentId, String titleSnapshot,
+                                  String imageUrlSnapshot, SpotRole spotRole, Integer distanceMeters,
+                                  Integer displayOrder) {
         this.course = course;
         this.anchorCourseSpot = anchorCourseSpot;
         this.contentId = contentId;
+        this.titleSnapshot = titleSnapshot;
+        this.imageUrlSnapshot = imageUrlSnapshot;
         this.spotRole = spotRole;
         this.distanceMeters = distanceMeters;
         this.displayOrder = displayOrder;
@@ -70,9 +81,10 @@ public class CourseExtraCandidate {
     }
 
     public static CourseExtraCandidate create(Course course, CourseSpot anchorCourseSpot, String contentId,
-                                               SpotRole spotRole, Integer distanceMeters, Integer displayOrder) {
-        return new CourseExtraCandidate(course, anchorCourseSpot, contentId, spotRole, distanceMeters,
-                displayOrder);
+                                               String titleSnapshot, String imageUrlSnapshot, SpotRole spotRole,
+                                               Integer distanceMeters, Integer displayOrder) {
+        return new CourseExtraCandidate(course, anchorCourseSpot, contentId, titleSnapshot, imageUrlSnapshot,
+                spotRole, distanceMeters, displayOrder);
     }
 
     public void select() {

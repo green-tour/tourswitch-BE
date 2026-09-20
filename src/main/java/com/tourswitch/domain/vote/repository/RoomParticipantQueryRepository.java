@@ -68,6 +68,32 @@ public class RoomParticipantQueryRepository {
         return hasParticipants(travelRoomId) && incompleteCount.longValue() == 0;
     }
 
+    public int updateExtraSelectionCompletion(Long travelRoomId, Long memberId, boolean completed) {
+        return entityManager.createNativeQuery("""
+                UPDATE room_participant
+                SET is_extra_selection_completed = :completed
+                WHERE travel_room_id = :travelRoomId AND member_id = :memberId
+                """)
+                .setParameter("completed", completed)
+                .setParameter("travelRoomId", travelRoomId)
+                .setParameter("memberId", memberId)
+                .executeUpdate();
+    }
+
+    /**
+     * 추가 투표 라운드의 전원 완료 판정. 1라운드와 같은 이유로 FOR UPDATE로 읽는다.
+     */
+    public boolean allParticipantsExtraCompleted(Long travelRoomId) {
+        Number incompleteCount = (Number) entityManager.createNativeQuery("""
+                SELECT COUNT(*) FROM room_participant
+                WHERE travel_room_id = :travelRoomId AND is_extra_selection_completed = FALSE
+                FOR UPDATE
+                """)
+                .setParameter("travelRoomId", travelRoomId)
+                .getSingleResult();
+        return hasParticipants(travelRoomId) && incompleteCount.longValue() == 0;
+    }
+
     private boolean hasParticipants(Long travelRoomId) {
         return countParticipants(travelRoomId) > 0;
     }
@@ -87,7 +113,7 @@ public class RoomParticipantQueryRepository {
     @SuppressWarnings("unchecked")
     public List<ParticipantCompletionRow> findParticipantCompletions(Long travelRoomId) {
         List<Object[]> rows = entityManager.createNativeQuery("""
-                SELECT member_id, is_selection_completed, completed_at
+                SELECT member_id, is_selection_completed, is_extra_selection_completed, completed_at
                 FROM room_participant WHERE travel_room_id = :travelRoomId
                 """)
                 .setParameter("travelRoomId", travelRoomId)
@@ -97,7 +123,8 @@ public class RoomParticipantQueryRepository {
                 .map(row -> new ParticipantCompletionRow(
                         ((Number) row[0]).longValue(),
                         (Boolean) row[1],
-                        (LocalDateTime) row[2]))
+                        (Boolean) row[2],
+                        (LocalDateTime) row[3]))
                 .toList();
     }
 }

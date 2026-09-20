@@ -1,6 +1,8 @@
 package com.tourswitch.domain.vote.service;
 
+import com.tourswitch.domain.course.repository.CourseExtraCandidateQueryRepository;
 import com.tourswitch.domain.course.service.CourseGenerationService;
+import com.tourswitch.domain.course.service.ExtraVoteService;
 import com.tourswitch.domain.vote.entity.RoomCandidate;
 import com.tourswitch.domain.vote.entity.RoomVote;
 import com.tourswitch.domain.vote.exception.CandidateNotFoundException;
@@ -32,12 +34,15 @@ import org.springframework.transaction.annotation.Transactional;
 public class VoteService {
 
     private static final String VOTING_STATUS = "VOTING";
+    private static final String EXTRA_VOTING_STATUS = "EXTRA_VOTING";
 
     private final RoomCandidateRepository roomCandidateRepository;
     private final RoomVoteRepository roomVoteRepository;
     private final RoomParticipantQueryRepository roomParticipantQueryRepository;
     private final TravelRoomStatusQueryRepository travelRoomStatusQueryRepository;
     private final CourseGenerationService courseGenerationService;
+    private final CourseExtraCandidateQueryRepository courseExtraCandidateQueryRepository;
+    private final ExtraVoteService extraVoteService;
 
     @Transactional
     public VoteTallyResponseDTO selectCandidate(Long travelRoomId, Long candidateId, Long memberId) {
@@ -77,11 +82,45 @@ public class VoteService {
         roomParticipantQueryRepository.updateSelectionCompletion(travelRoomId, memberId, completed);
 
         if (completed && roomParticipantQueryRepository.allParticipantsCompleted(travelRoomId)) {
-            if (travelRoomStatusQueryRepository.closeIfVoting(travelRoomId)) {
-                courseGenerationService.generateDraftCourse(travelRoomId);
-            }
+            closeVotingRound(travelRoomId);
         }
 
+        return buildTally(travelRoomId);
+    }
+
+    /**
+     * 관광지 투표를 끝낸다. 득표를 집계해 경유지를 확정하고 그 좌표로 부가 후보를 만든다.
+     * 부가 옵션을 켠 방은 추가 투표 라운드로 넘어가고, 아니면 바로 닫힌다.
+     *
+     * 전원 완료와 방장 수동 종료가 경합할 수 있어 조건부 UPDATE가 성공한 쪽만 코스를 만든다.
+     */
+    @Transactional
+    public void closeVotingRound(Long travelRoomId) {
+        if (!travelRoomStatusQueryRepository.startExtraVotingIfVoting(travelRoomId)) {
+            return;
+        }
+        courseGenerationService.generateDraftCourse(travelRoomId);
+        if (!courseExtraCandidateQueryRepository.existsByTravelRoomId(travelRoomId)) {
+            travelRoomStatusQueryRepository.closeIfExtraVoting(travelRoomId);
+        }
+    }
+
+    /**
+     * 방장이 현재 라운드를 강제로 끝낸다. 진행 중인 라운드에 맞춰 다음 단계로 넘긴다.
+     */
+    @Transactional
+    public VoteTallyResponseDTO closeCurrentRoundByHost(Long travelRoomId, Long memberId) {
+        if (!roomParticipantQueryRepository.isHost(travelRoomId, memberId)) {
+            throw new VoteAccessDeniedException("방장만 투표를 종료할 수 있습니다.");
+        }
+        String status = travelRoomStatusQueryRepository.findStatus(travelRoomId);
+        if (VOTING_STATUS.equals(status)) {
+            closeVotingRound(travelRoomId);
+        } else if (EXTRA_VOTING_STATUS.equals(status)) {
+            extraVoteService.closeExtraVotingRound(travelRoomId);
+        } else {
+            throw new VoteSessionNotActiveException("이미 종료된 세션입니다.");
+        }
         return buildTally(travelRoomId);
     }
 
