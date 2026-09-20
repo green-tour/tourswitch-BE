@@ -1,5 +1,6 @@
 package com.tourswitch.domain.place.service;
 
+import com.tourswitch.global.spatial.SpotNameMatcher;
 import com.tourswitch.domain.metadata.model.KeywordCode;
 import com.tourswitch.domain.place.exception.PlaceNotFoundException;
 import com.tourswitch.domain.place.exception.RegionNotFoundException;

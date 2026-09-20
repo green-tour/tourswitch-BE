@@ -1,5 +1,11 @@
 server:
   port: 8088
+  # 혼잡도 지도 응답은 폴리곤까지 담겨 490KB에 이른다. gzip을 켜면 115KB로 줄어든다(실측).
+  # 홈에서도 지도를 그리므로 모바일에서 체감이 크다.
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/plain,text/css,text/javascript
+    min-response-size: 2KB
 
 spring:
   config:
@@ -98,10 +104,11 @@ tourapi:
   base-url: https://apis.data.go.kr/B551011
   connect-timeout-ms: 3000
   read-timeout-ms: 5000
+  # 키를 쉼표로 여러 개 넣으면 앞의 키가 한도에 걸릴 때 다음 키로 넘어간다.
   kor-service:
-    service-key: ${TOUR_API_KEY}
+    service-keys: ${TOUR_API_KEYS:${TOUR_API_KEY}}
   tats-cnctr-rate:
-    service-key: ${TOUR_API_KEY}
+    service-keys: ${TOUR_API_KEYS:${TOUR_API_KEY}}
 
 seoul-open-api:
   base-url: ${SEOUL_OPEN_API_BASE_URL:http://openapi.seoul.go.kr:8088}

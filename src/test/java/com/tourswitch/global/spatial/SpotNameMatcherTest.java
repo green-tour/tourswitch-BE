@@ -1,4 +1,4 @@
-package com.tourswitch.domain.place.service;
+package com.tourswitch.global.spatial;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

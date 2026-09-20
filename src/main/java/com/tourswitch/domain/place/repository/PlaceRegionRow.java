@@ -5,6 +5,6 @@ package com.tourswitch.domain.place.repository;
  * legalDongAreaCode/legalDongDistrictCode는 KorService2용 3자리 법정동 코드, districtCode는
  * TatsCnctrRateService용 5자리 시군구 코드로 서로 다르다(TourAPI 실시간전환 계획 문서 11절).
  */
-public record PlaceRegionRow(String districtName, String legalDongAreaCode, String legalDongDistrictCode,
-                              String districtCode) {
+public record PlaceRegionRow(Long regionId, String districtName, String legalDongAreaCode,
+                              String legalDongDistrictCode, String districtCode) {
 }

@@ -88,8 +88,9 @@ public class CourseReplacementService {
         if (course.getStatus() != CourseStatus.CONFIRMED) {
             throw new RealtimeChangeConflictException("확정된 코스만 장소를 교체할 수 있습니다.");
         }
-        if (!course.getTravelDate().isEqual(LocalDate.now(SEOUL_ZONE_ID))) {
-            throw new RealtimeChangeConflictException("장소 교체는 여행 당일에만 이용할 수 있습니다.");
+        // 추천은 여행일 기준으로 한다(집중률도 여행일로 조회한다). 지난 여행만 막는다.
+        if (course.getTravelDate().isBefore(LocalDate.now(SEOUL_ZONE_ID))) {
+            throw new RealtimeChangeConflictException("이미 지난 여행은 장소를 교체할 수 없습니다.");
         }
     }
 }

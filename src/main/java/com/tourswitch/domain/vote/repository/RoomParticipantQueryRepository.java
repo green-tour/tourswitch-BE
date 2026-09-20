@@ -113,8 +113,13 @@ public class RoomParticipantQueryRepository {
     @SuppressWarnings("unchecked")
     public List<ParticipantCompletionRow> findParticipantCompletions(Long travelRoomId) {
         List<Object[]> rows = entityManager.createNativeQuery("""
-                SELECT member_id, is_selection_completed, is_extra_selection_completed, completed_at
-                FROM room_participant WHERE travel_room_id = :travelRoomId
+                SELECT rp.member_id, m.nickname, rp.is_selection_completed,
+                       rp.is_extra_selection_completed, rp.completed_at
+                FROM room_participant rp
+                -- 회원 행이 사라져도 참여자가 목록에서 빠지면 완료 인원 계산이 어긋난다.
+                LEFT JOIN member m ON m.id = rp.member_id
+                WHERE rp.travel_room_id = :travelRoomId
+                ORDER BY rp.is_host DESC, rp.joined_at, rp.id
                 """)
                 .setParameter("travelRoomId", travelRoomId)
                 .getResultList();
@@ -122,9 +127,10 @@ public class RoomParticipantQueryRepository {
         return rows.stream()
                 .map(row -> new ParticipantCompletionRow(
                         ((Number) row[0]).longValue(),
-                        (Boolean) row[1],
+                        (String) row[1],
                         (Boolean) row[2],
-                        (LocalDateTime) row[3]))
+                        (Boolean) row[3],
+                        (LocalDateTime) row[4]))
                 .toList();
     }
 }

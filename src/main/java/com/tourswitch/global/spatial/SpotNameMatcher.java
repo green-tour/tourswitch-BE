@@ -1,4 +1,4 @@
-package com.tourswitch.domain.place.service;
+package com.tourswitch.global.spatial;
 
 import java.text.Normalizer;
 import java.util.Locale;
@@ -11,7 +11,7 @@ import java.util.Locale;
  * 지우는 것은 공백류뿐이다. 가운뎃점이나 괄호 같은 기호는 남긴다. 그것까지 지우면
  * 서로 다른 장소가 같은 키로 합쳐질 수 있다.
  */
-final class SpotNameMatcher {
+public final class SpotNameMatcher {
 
     private SpotNameMatcher() {
     }
@@ -20,7 +20,7 @@ final class SpotNameMatcher {
      * 정규화한 매칭 키. 이름이 없거나 공백뿐이면 빈 문자열이며, 호출부는 빈 키를
      * 매칭에 쓰지 않는다(이름 없는 장소끼리 서로 붙는 것을 막는다).
      */
-    static String key(String name) {
+    public static String key(String name) {
         if (name == null || name.isBlank()) {
             return "";
         }

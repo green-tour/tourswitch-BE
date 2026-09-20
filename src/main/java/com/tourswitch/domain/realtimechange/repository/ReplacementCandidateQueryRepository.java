@@ -1,5 +1,6 @@
 package com.tourswitch.domain.realtimechange.repository;
 
+import com.tourswitch.global.spatial.SpotNameMatcher;
 import com.tourswitch.domain.course.entity.Course;
 import com.tourswitch.domain.course.repository.CourseSpotRepository;
 import com.tourswitch.domain.realtimechange.entity.AdministrativeDong;
@@ -68,7 +69,7 @@ public class ReplacementCandidateQueryRepository {
                 if (matchedKeywords == null || existingContentIds.contains(spot.contentId())) {
                     continue;
                 }
-                TourApiCongestionItem congestion = congestionByName.get(spot.title());
+                TourApiCongestionItem congestion = congestionByName.get(SpotNameMatcher.key(spot.title()));
                 Optional<SeoulRealtimeCrowdRow> seoulCrowd = seoulRealtimeCrowdQueryRepository.findLatest(
                         spot.latitude(), spot.longitude());
                 candidatesByContentId.putIfAbsent(spot.contentId(), new ReplacementCandidateRow(
@@ -122,7 +123,7 @@ public class ReplacementCandidateQueryRepository {
         try {
             for (TourApiCongestionItem item : tatsCnctrRateClient.tatsCnctrRatedList(
                     region.legalDongAreaCode(), region.districtCode())) {
-                if (targetBaseYmd.equals(item.baseYmd())) result.put(item.touristSpotName(), item);
+                if (targetBaseYmd.equals(item.baseYmd())) result.put(SpotNameMatcher.key(item.touristSpotName()), item);
             }
         } catch (RuntimeException exception) {
             // 집중률은 보조 점수다. 장애 시 후보 조회 자체를 중단하지 않고 키워드·거리로 추천한다.
