@@ -15,6 +15,7 @@ import org.springframework.stereotype.Repository;
 public class TravelRoomStatusQueryRepository {
 
     private static final String VOTING_STATUS = "VOTING";
+    private static final String EXTRA_VOTING_STATUS = "EXTRA_VOTING";
     private static final String CLOSED_STATUS = "CLOSED";
     private static final String COURSE_CONFIRMED_STATUS = "COURSE_CONFIRMED";
 
@@ -36,6 +37,37 @@ public class TravelRoomStatusQueryRepository {
                 .setParameter("closedAt", LocalDateTime.now())
                 .setParameter("travelRoomId", travelRoomId)
                 .setParameter("votingStatus", VOTING_STATUS)
+                .executeUpdate();
+        return updated > 0;
+    }
+
+    /**
+     * 관광지 투표를 끝내고 추가 투표 라운드로 넘긴다. 부가 옵션을 하나라도 켠 방만 이 상태를 거친다.
+     */
+    public boolean startExtraVotingIfVoting(Long travelRoomId) {
+        int updated = entityManager.createNativeQuery("""
+                UPDATE travel_room SET status = :extraVotingStatus
+                WHERE id = :travelRoomId AND status = :votingStatus
+                """)
+                .setParameter("extraVotingStatus", EXTRA_VOTING_STATUS)
+                .setParameter("travelRoomId", travelRoomId)
+                .setParameter("votingStatus", VOTING_STATUS)
+                .executeUpdate();
+        return updated > 0;
+    }
+
+    /**
+     * 추가 투표까지 끝나면 방을 닫는다.
+     */
+    public boolean closeIfExtraVoting(Long travelRoomId) {
+        int updated = entityManager.createNativeQuery("""
+                UPDATE travel_room SET status = :closedStatus, closed_at = :closedAt
+                WHERE id = :travelRoomId AND status = :extraVotingStatus
+                """)
+                .setParameter("closedStatus", CLOSED_STATUS)
+                .setParameter("closedAt", LocalDateTime.now())
+                .setParameter("travelRoomId", travelRoomId)
+                .setParameter("extraVotingStatus", EXTRA_VOTING_STATUS)
                 .executeUpdate();
         return updated > 0;
     }
