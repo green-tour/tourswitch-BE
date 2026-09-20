@@ -124,7 +124,7 @@ public class SeoulPlaceCache {
         for (int contentTypeId : allContentTypeIds()) {
             for (TourApiSpotItem item : korServiceClient.areaBasedList2(region.legalDongAreaCode(),
                     region.legalDongDistrictCode(), contentTypeId, null)) {
-                TourApiCongestionItem congestion = congestionByName.get(item.title());
+                TourApiCongestionItem congestion = congestionByName.get(SpotNameMatcher.key(item.title()));
                 firstMatchByContentId.putIfAbsent(item.contentId(), new CachedPlace(
                         item.contentId(), item.contentTypeId(), item.title(), item.firstImageUrl(),
                         region.districtName(), item.classificationLevel2Code(),
@@ -146,8 +146,10 @@ public class SeoulPlaceCache {
         Map<String, TourApiCongestionItem> byName = new LinkedHashMap<>();
         for (TourApiCongestionItem item : tatsCnctrRateClient.tatsCnctrRatedList(region.legalDongAreaCode(),
                 region.districtCode())) {
-            if (targetBaseYmd.equals(item.baseYmd())) {
-                byName.put(item.touristSpotName(), item);
+            String nameKey = SpotNameMatcher.key(item.touristSpotName());
+            // 이름 없는 항목을 빈 키로 넣으면 이름 없는 장소가 전부 그 혼잡도에 붙는다.
+            if (!nameKey.isEmpty() && targetBaseYmd.equals(item.baseYmd())) {
+                byName.put(nameKey, item);
             }
         }
         return byName;
