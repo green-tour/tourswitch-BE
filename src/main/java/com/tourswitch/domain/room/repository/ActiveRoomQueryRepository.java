@@ -25,7 +25,10 @@ public class ActiveRoomQueryRepository {
                 JOIN region r ON r.id = tr.region_id
                 JOIN room_participant all_rp ON all_rp.travel_room_id = tr.id
                 WHERE member_rp.member_id = :memberId
-                  AND tr.status IN ('VOTING', 'EXTRA_VOTING')
+                  AND (
+                      tr.status IN ('VOTING', 'EXTRA_VOTING')
+                      OR (tr.status = 'COURSE_CONFIRMED' AND tr.travel_date >= CURRENT_DATE)
+                  )
                 GROUP BY tr.id, tr.room_name, tr.travel_date, tr.region_id, r.district_name, tr.status,
                          tr.host_member_id, tr.created_at
                 ORDER BY tr.created_at DESC, tr.id DESC

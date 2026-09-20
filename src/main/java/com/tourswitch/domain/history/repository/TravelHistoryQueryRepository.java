@@ -25,6 +25,7 @@ public class TravelHistoryQueryRepository {
                 LEFT JOIN course c ON c.travel_room_id = tr.id
                 WHERE rp.member_id = :memberId
                   AND tr.status IN ('CLOSED', 'COURSE_CONFIRMED')
+                  AND tr.travel_date < CURRENT_DATE
                 ORDER BY tr.travel_date DESC, tr.id DESC
                 LIMIT :size OFFSET :offset
                 """)
@@ -46,6 +47,7 @@ public class TravelHistoryQueryRepository {
                 JOIN travel_room tr ON tr.id = rp.travel_room_id
                 WHERE rp.member_id = :memberId
                   AND tr.status IN ('CLOSED', 'COURSE_CONFIRMED')
+                  AND tr.travel_date < CURRENT_DATE
                 """).setParameter("memberId", memberId).getSingleResult();
         return count.longValue();
     }
