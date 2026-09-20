@@ -86,7 +86,9 @@ public class PlaceSearchService {
 
     public PlaceDetailResponseDTO getDetail(String contentId, Long regionId) {
         TourApiSpotDetail detail = korServiceClient.detailCommon2(contentId).orElseThrow(PlaceNotFoundException::new);
-        PlaceRegionRow region = regionId == null ? null : findRegion(regionId);
+        // 호출자가 자치구를 넘기지 않아도 캐시에서 찾는다. 그러지 않으면 링크로 바로 들어온
+        // 상세 화면에서 자치구와 혼잡도가 비어, 화면이 기본값을 사실처럼 보여준다.
+        PlaceRegionRow region = regionId == null ? resolveRegionByContentId(contentId) : findRegion(regionId);
         BigDecimal concentrationRate = null;
         if (region != null) {
             TourApiCongestionItem congestion = fetchCongestionByName(region, LocalDate.now()).get(SpotNameMatcher.key(detail.title()));
@@ -96,6 +98,15 @@ public class PlaceSearchService {
                 region == null ? null : region.districtName(), detail.overview(), detail.firstImageUrl(),
                 detail.address(), detail.latitude(), detail.longitude(), toGrade(concentrationRate),
                 concentrationRate);
+    }
+
+    /** 캐시가 아는 자치구명으로 지역 기준정보를 찾는다. 캐시에 없으면 비운다. */
+    private PlaceRegionRow resolveRegionByContentId(String contentId) {
+        return seoulPlaceCache.findDistrictNameByContentId(contentId)
+                .flatMap(districtName -> placeRegionQueryRepository.findAll().stream()
+                        .filter(row -> districtName.equals(row.districtName()))
+                        .findFirst())
+                .orElse(null);
     }
 
     private PlaceRegionRow findRegion(Long regionId) {
