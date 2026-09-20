@@ -1,5 +1,7 @@
 package com.tourswitch.domain.room.controller;
 
+import com.tourswitch.global.security.principal.UserPrincipal;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import com.tourswitch.domain.room.request.CreateTravelRoomRequest;
 import com.tourswitch.domain.room.response.ActiveRoomResponse;
 import com.tourswitch.domain.room.response.CreateTravelRoomResponse;
@@ -18,13 +20,13 @@ public class TravelRoomController {
     private final ActiveRoomService activeRoomService;
 
     @GetMapping("/active")
-    public GlobalRes<ActiveRoomResponse> getActiveRoom(@RequestParam Long memberId) {
-        return GlobalRes.success(activeRoomService.getActiveRoom(memberId));
+    public GlobalRes<ActiveRoomResponse> getActiveRoom(@AuthenticationPrincipal UserPrincipal principal) {
+        return GlobalRes.success(activeRoomService.getActiveRoom(principal.memberId()));
     }
 
     @PostMapping
-    public GlobalRes<CreateTravelRoomResponse> createRoom(@RequestParam Long memberId,
+    public GlobalRes<CreateTravelRoomResponse> createRoom(@AuthenticationPrincipal UserPrincipal principal,
                                                            @Valid @RequestBody CreateTravelRoomRequest request) {
-        return GlobalRes.success(travelRoomService.createRoom(memberId, request));
+        return GlobalRes.success(travelRoomService.createRoom(principal.memberId(), request));
     }
 }
