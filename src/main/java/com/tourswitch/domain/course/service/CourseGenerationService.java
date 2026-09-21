@@ -160,7 +160,10 @@ public class CourseGenerationService {
                     }
                 }
             }
-            courseExtraCandidateRepository.saveAll(extras);
+            // 바로 뒤의 투표 라운드 전환 로직이 네이티브 쿼리로 후보 존재 여부를 확인한다.
+            // saveAll만 쓰면 아직 flush되지 않은 후보를 0개로 읽어 EXTRA_VOTING을 CLOSED로
+            // 잘못 닫을 수 있으므로, 후보를 먼저 DB에 반영한다.
+            courseExtraCandidateRepository.saveAllAndFlush(extras);
 
             return course;
         });
