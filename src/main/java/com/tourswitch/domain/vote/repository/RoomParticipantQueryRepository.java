@@ -80,6 +80,19 @@ public class RoomParticipantQueryRepository {
                 .executeUpdate();
     }
 
+    /** 1차 투표를 다시 열면 모든 참여자가 새 라운드를 완료하도록 완료 표시를 초기화한다. */
+    public int resetRoundCompletions(Long travelRoomId) {
+        return entityManager.createNativeQuery("""
+                UPDATE room_participant
+                SET is_selection_completed = FALSE,
+                    is_extra_selection_completed = FALSE,
+                    completed_at = NULL
+                WHERE travel_room_id = :travelRoomId
+                """)
+                .setParameter("travelRoomId", travelRoomId)
+                .executeUpdate();
+    }
+
     /**
      * 추가 투표 라운드의 전원 완료 판정. 1라운드와 같은 이유로 FOR UPDATE로 읽는다.
      */
