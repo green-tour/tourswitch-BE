@@ -16,6 +16,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * 관광지 검색과 상세 조회 API를 제공한다.
+ */
 @Validated
 @RestController
 @RequiredArgsConstructor
@@ -24,6 +27,9 @@ public class PlaceController {
 
     private final PlaceSearchService placeSearchService;
 
+    /**
+     * 조건에 맞는 관광지 목록을 페이지 단위로 조회한다.
+     */
     @GetMapping
     public GlobalRes<PageRes<PlaceSummaryResponseDTO>> search(
             @RequestParam(required = false) Long regionId,
@@ -34,6 +40,9 @@ public class PlaceController {
         return GlobalRes.success(placeSearchService.search(regionId, keywordCodes, congestionLevel, page, size));
     }
 
+    /**
+     * 관광지 기본 정보와 최대 7일의 혼잡도 예측을 조회한다.
+     */
     @GetMapping("/{contentId}")
     public GlobalRes<PlaceDetailResponseDTO> getDetail(@PathVariable String contentId,
                                                         @RequestParam(required = false) Long regionId) {
