@@ -1,23 +1,25 @@
 package com.tourswitch.domain.place.service;
 
-import com.tourswitch.global.spatial.SpotNameMatcher;
 import com.tourswitch.domain.metadata.model.KeywordCode;
 import com.tourswitch.domain.place.exception.PlaceNotFoundException;
 import com.tourswitch.domain.place.exception.RegionNotFoundException;
+import com.tourswitch.domain.place.model.PlaceCrowdForecast;
+import com.tourswitch.domain.place.model.PlaceCrowdForecastQuery;
+import com.tourswitch.domain.place.provider.PlaceCrowdForecastProvider;
+import com.tourswitch.domain.place.repository.PlaceCrowdNameAliasQueryRepository;
 import com.tourswitch.domain.place.repository.PlaceKeywordClassificationQueryRepository;
 import com.tourswitch.domain.place.repository.PlaceRegionQueryRepository;
 import com.tourswitch.domain.place.repository.PlaceRegionRow;
+import com.tourswitch.domain.place.response.PlaceCrowdForecastResponseDTO;
 import com.tourswitch.domain.place.response.PlaceDetailResponseDTO;
 import com.tourswitch.domain.place.response.PlaceSummaryResponseDTO;
 import com.tourswitch.global.client.tourapi.KorServiceClient;
-import com.tourswitch.global.client.tourapi.TatsCnctrRateClient;
-import com.tourswitch.global.client.tourapi.TourApiCongestionItem;
 import com.tourswitch.global.client.tourapi.TourApiSpotDetail;
 import com.tourswitch.global.client.tourapi.TourApiSpotItem;
+import com.tourswitch.global.spatial.SpotNameMatcher;
 import com.tourswitch.global.response.PageRes;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,14 +45,16 @@ public class PlaceSearchService {
 
     private static final String SEOUL_AREA_CODE = "11";
     private static final List<Integer> SEARCHABLE_CONTENT_TYPE_IDS = List.of(12, 14, 15, 28);
-    private static final DateTimeFormatter BASE_YMD_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd");
-
     private final KorServiceClient korServiceClient;
-    private final TatsCnctrRateClient tatsCnctrRateClient;
+    private final PlaceCrowdForecastProvider placeCrowdForecastProvider;
+    private final PlaceCrowdNameAliasQueryRepository placeCrowdNameAliasQueryRepository;
     private final PlaceRegionQueryRepository placeRegionQueryRepository;
     private final PlaceKeywordClassificationQueryRepository placeKeywordClassificationQueryRepository;
     private final SeoulPlaceCache seoulPlaceCache;
 
+    /**
+     * 지역, 분류와 현재 혼잡도 필터에 맞는 관광지를 페이지 단위로 반환한다.
+     */
     public PageRes<PlaceSummaryResponseDTO> search(Long regionId, List<String> keywordCodes, String congestionLevel,
                                                      int page, int size) {
         PlaceRegionRow region = regionId == null ? null : findRegion(regionId);
@@ -60,9 +64,10 @@ public class PlaceSearchService {
             return paginate(searchFromCache(region, classificationCodes, congestionLevel), page, size);
         }
 
-        Map<String, TourApiCongestionItem> congestionByName = region == null
+        Map<String, BigDecimal> congestionByName = region == null
                 ? Map.of()
-                : fetchCongestionByName(region, LocalDate.now());
+                : placeCrowdForecastProvider.findDailyRates(region.legalDongAreaCode(), region.districtCode(),
+                        LocalDate.now());
 
         Map<String, TourApiSpotItem> firstMatchByContentId = new LinkedHashMap<>();
         String areaCode = region == null ? SEOUL_AREA_CODE : region.legalDongAreaCode();
@@ -84,31 +89,59 @@ public class PlaceSearchService {
         return paginate(all, page, size);
     }
 
+    /**
+     * 관광지 상세 정보와 오늘부터 최대 7일의 집중률 예측을 반환한다.
+     */
     public PlaceDetailResponseDTO getDetail(String contentId, Long regionId) {
         TourApiSpotDetail detail = korServiceClient.detailCommon2(contentId).orElseThrow(PlaceNotFoundException::new);
         // 호출자가 자치구를 넘기지 않아도 캐시에서 찾는다. 그러지 않으면 링크로 바로 들어온
         // 상세 화면에서 자치구와 혼잡도가 비어, 화면이 기본값을 사실처럼 보여준다.
-        PlaceRegionRow region = regionId == null ? resolveRegionByContentId(contentId) : findRegion(regionId);
-        BigDecimal concentrationRate = null;
-        if (region != null) {
-            TourApiCongestionItem congestion = fetchCongestionByName(region, LocalDate.now()).get(SpotNameMatcher.key(detail.title()));
-            concentrationRate = congestion == null ? null : congestion.concentrationRate();
-        }
+        PlaceRegionRow region = regionId == null ? resolveRegion(detail) : findRegion(regionId);
+        LocalDate today = LocalDate.now();
+        List<PlaceCrowdForecast> weeklyForecast = region == null
+                ? List.of()
+                : placeCrowdForecastProvider.findWeeklyForecast(new PlaceCrowdForecastQuery(
+                        region.legalDongAreaCode(),
+                        region.districtCode(),
+                        detail.title(),
+                        placeCrowdNameAliasQueryRepository.findAttractionNamesByContentId(detail.contentId()),
+                        today
+                ));
+        BigDecimal concentrationRate = weeklyForecast.stream()
+                .filter(forecast -> today.equals(forecast.forecastDate()))
+                .map(PlaceCrowdForecast::concentrationRate)
+                .findFirst()
+                .orElse(null);
+        List<PlaceCrowdForecastResponseDTO> weeklyForecastResponse = weeklyForecast.stream()
+                .map(forecast -> PlaceCrowdForecastResponseDTO.of(forecast, toGrade(forecast.concentrationRate())))
+                .toList();
         return PlaceDetailResponseDTO.of(detail.contentId(), detail.title(),
                 region == null ? null : region.districtName(), detail.overview(), detail.firstImageUrl(),
                 detail.address(), detail.latitude(), detail.longitude(), toGrade(concentrationRate),
-                concentrationRate);
+                concentrationRate, weeklyForecastResponse);
     }
 
-    /** 캐시가 아는 자치구명으로 지역 기준정보를 찾는다. 캐시에 없으면 비운다. */
-    private PlaceRegionRow resolveRegionByContentId(String contentId) {
-        return seoulPlaceCache.findDistrictNameByContentId(contentId)
+    /**
+     * 캐시의 contentId를 우선 사용하고, 링크 직접 접근처럼 캐시에 없는 경우 상세 주소에서 자치구를 찾는다.
+     */
+    private PlaceRegionRow resolveRegion(TourApiSpotDetail detail) {
+        PlaceRegionRow cachedRegion = seoulPlaceCache.findDistrictNameByContentId(detail.contentId())
                 .flatMap(districtName -> placeRegionQueryRepository.findAll().stream()
                         .filter(row -> districtName.equals(row.districtName()))
                         .findFirst())
                 .orElse(null);
+        if (cachedRegion != null || detail.address() == null || detail.address().isBlank()) {
+            return cachedRegion;
+        }
+        return placeRegionQueryRepository.findAll().stream()
+                .filter(row -> detail.address().contains(row.districtName()))
+                .findFirst()
+                .orElse(null);
     }
 
+    /**
+     * 요청 지역 식별자로 장소 검색에 필요한 지역 기준정보를 조회한다.
+     */
     private PlaceRegionRow findRegion(Long regionId) {
         return placeRegionQueryRepository.findById(regionId).orElseThrow(RegionNotFoundException::new);
     }
@@ -151,29 +184,20 @@ public class PlaceSearchService {
         return classificationCodes;
     }
 
-    private Map<String, TourApiCongestionItem> fetchCongestionByName(PlaceRegionRow region, LocalDate targetDate) {
-        String targetBaseYmd = targetDate.format(BASE_YMD_FORMAT);
-        Map<String, TourApiCongestionItem> byName = new LinkedHashMap<>();
-        for (TourApiCongestionItem item : tatsCnctrRateClient.tatsCnctrRatedList(region.legalDongAreaCode(),
-                region.districtCode())) {
-            String nameKey = SpotNameMatcher.key(item.touristSpotName());
-            // 이름 없는 항목을 빈 키로 넣으면 이름 없는 장소가 전부 그 혼잡도에 붙는다.
-            if (!nameKey.isEmpty() && targetBaseYmd.equals(item.baseYmd())) {
-                byName.put(nameKey, item);
-            }
-        }
-        return byName;
-    }
-
+    /**
+     * TourAPI 관광지 항목에 현재 지역의 집중률을 결합해 목록 응답으로 변환한다.
+     */
     private PlaceSummaryResponseDTO toSummary(TourApiSpotItem item, PlaceRegionRow region,
-                                               Map<String, TourApiCongestionItem> congestionByName) {
-        TourApiCongestionItem congestion = congestionByName.get(SpotNameMatcher.key(item.title()));
-        BigDecimal concentrationRate = congestion == null ? null : congestion.concentrationRate();
+                                               Map<String, BigDecimal> congestionByName) {
+        BigDecimal concentrationRate = congestionByName.get(SpotNameMatcher.key(item.title()));
         return PlaceSummaryResponseDTO.of(item.contentId(), item.title(),
                 region == null ? null : region.districtName(), item.firstImageUrl(), toGrade(concentrationRate),
                 concentrationRate);
     }
 
+    /**
+     * 집중률을 상세·목록 화면에서 공통으로 사용하는 혼잡 단계로 변환한다.
+     */
     private String toGrade(BigDecimal concentrationRate) {
         if (concentrationRate == null) {
             return null;
@@ -191,6 +215,9 @@ public class PlaceSearchService {
         return "붐빔";
     }
 
+    /**
+     * 전체 조회 결과에서 요청한 페이지 범위만 잘라 페이지 응답을 생성한다.
+     */
     private PageRes<PlaceSummaryResponseDTO> paginate(List<PlaceSummaryResponseDTO> all, int page, int size) {
         int fromIndex = Math.min((page - 1) * size, all.size());
         int toIndex = Math.min(fromIndex + size, all.size());
