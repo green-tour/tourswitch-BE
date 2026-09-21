@@ -28,7 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 계획 문서 4단계. 카드 선택 = 한 표. 취소는 행 삭제로 멱등하게 처리한다.
- * 투표 라운드의 종료와 다음 단계 전환은 방장 수동 종료만 수행한다.
+ * 1차 투표는 전원 완료 시 다음 라운드로 전환하되, 최종 방 종료는 방장 수동 종료만 수행한다.
  */
 @Service
 @RequiredArgsConstructor
@@ -84,6 +84,12 @@ public class VoteService {
         requireParticipant(travelRoomId, memberId);
 
         roomParticipantQueryRepository.updateSelectionCompletion(travelRoomId, memberId, completed);
+
+        // 관광지 투표가 모두 끝나면 경유지를 확정해 추가 투표를 연다.
+        // 부가 후보가 없는 방은 closeVotingRound 안에서 바로 CLOSED가 되어 현황으로 간다.
+        if (completed && roomParticipantQueryRepository.allParticipantsCompleted(travelRoomId)) {
+            closeVotingRound(travelRoomId);
+        }
 
         return buildTally(travelRoomId, memberId);
     }
