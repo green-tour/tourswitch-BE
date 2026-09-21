@@ -64,18 +64,13 @@ public class ExtraVoteService {
         return buildResponse(travelRoomId, memberId);
     }
 
-    /**
-     * 참여자가 추가 투표를 마쳤다고 알린다. 전원이 마치면 라운드를 닫는다.
-     */
+    /** 참여자가 추가 투표를 마쳤다고 알린다. 라운드 종료는 방장이 직접 수행한다. */
     @Transactional
     public ExtraVoteResponseDTO complete(Long travelRoomId, Long memberId) {
         requireExtraVotingSession(travelRoomId);
         requireParticipant(travelRoomId, memberId);
 
         roomParticipantQueryRepository.updateExtraSelectionCompletion(travelRoomId, memberId, true);
-        if (roomParticipantQueryRepository.allParticipantsExtraCompleted(travelRoomId)) {
-            closeExtraVotingRound(travelRoomId);
-        }
         return buildResponse(travelRoomId, memberId);
     }
 
