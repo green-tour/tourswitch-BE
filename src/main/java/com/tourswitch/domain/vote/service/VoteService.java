@@ -27,8 +27,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 계획 문서 4단계. 카드 선택 = 한 표. 취소는 행 삭제로 멱등하게 처리하고, 전원 완료 시
- * travel_room을 자동 종료한다(방장 수동 종료 경로와의 경합은 조건부 UPDATE로 안전하게 처리).
+ * 계획 문서 4단계. 카드 선택 = 한 표. 취소는 행 삭제로 멱등하게 처리한다.
+ * 투표 라운드의 종료와 다음 단계 전환은 방장 수동 종료만 수행한다.
  */
 @Service
 @RequiredArgsConstructor
@@ -84,10 +84,6 @@ public class VoteService {
         requireParticipant(travelRoomId, memberId);
 
         roomParticipantQueryRepository.updateSelectionCompletion(travelRoomId, memberId, completed);
-
-        if (completed && roomParticipantQueryRepository.allParticipantsCompleted(travelRoomId)) {
-            closeVotingRound(travelRoomId);
-        }
 
         return buildTally(travelRoomId, memberId);
     }
