@@ -15,6 +15,7 @@ import com.tourswitch.domain.history.controller.TravelHistoryController;
 import com.tourswitch.domain.history.service.TravelHistoryService;
 import com.tourswitch.domain.member.repository.MemberRepository;
 import com.tourswitch.domain.place.controller.PlaceController;
+import com.tourswitch.domain.place.service.PlaceFavoriteService;
 import com.tourswitch.domain.place.service.PlaceSearchService;
 import com.tourswitch.domain.room.controller.InviteController;
 import com.tourswitch.domain.room.controller.TravelRoomController;
@@ -76,6 +77,7 @@ class ApiAuthorizationTest {
     @MockitoBean ActiveRoomService activeRoomService;
     @MockitoBean InviteService inviteService;
     @MockitoBean PlaceSearchService placeSearchService;
+    @MockitoBean PlaceFavoriteService placeFavoriteService;
 
     @MockitoBean JwtProvider jwtProvider;
     @MockitoBean MemberRepository memberRepository;
@@ -113,6 +115,7 @@ class ApiAuthorizationTest {
             "/api/rooms/1/extra-votes",
             "/api/courses",
             "/api/courses/1",
+            "/api/places/125452/favorite",
     })
     void 보호된_경로는_인증_없이_호출하면_401(String path) throws Exception {
         mockMvc.perform(get(path)).andExpect(status().isUnauthorized());
@@ -162,6 +165,14 @@ class ApiAuthorizationTest {
                 .andExpect(status().isOk());
 
         verify(activeRoomService).getActiveRoom(MEMBER_ID);
+    }
+
+    @Test
+    void 관광지_찜_조회는_principal의_memberId를_쓴다() throws Exception {
+        mockMvc.perform(get("/api/places/125452/favorite").with(authentication(asMember())))
+                .andExpect(status().isOk());
+
+        verify(placeFavoriteService).getFavorite(MEMBER_ID, "125452");
     }
 
     @Test

@@ -93,6 +93,8 @@ public class SecurityConfig {
 
                     .requestMatchers(
                         "/api/users/me",
+                        "/api/users/me/**",
+                        "/api/places/*/favorite",
                         "/api/auth/logout",
                         "/api/rooms/**",
                         "/api/courses/**",
