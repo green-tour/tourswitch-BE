@@ -5,6 +5,9 @@ import com.tourswitch.domain.place.model.PlaceCrowdForecastQuery;
 import com.tourswitch.global.client.tourapi.TatsCnctrRateClient;
 import com.tourswitch.global.client.tourapi.TourApiCongestionItem;
 import com.tourswitch.global.spatial.SpotNameMatcher;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -13,8 +16,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
 
 /**
  * TourAPI 집중률 데이터를 관광지명과 날짜 기준으로 조회해 장소 도메인에 제공한다.
@@ -24,7 +25,7 @@ import org.springframework.stereotype.Component;
 public class PlaceCrowdForecastProvider {
 
     private static final DateTimeFormatter BASE_YMD_FORMAT = DateTimeFormatter.BASIC_ISO_DATE;
-    private static final int WEEKLY_FORECAST_DAYS = 7;
+    private static final int FORECAST_DAYS = 30;
 
     private final TatsCnctrRateClient tatsCnctrRateClient;
 
@@ -45,7 +46,7 @@ public class PlaceCrowdForecastProvider {
     }
 
     /**
-     * 관광지명과 일치하는 오늘 이후 최대 7일의 예상 집중률을 날짜순으로 반환한다.
+     * 관광지명과 일치하는 오늘 이후 최대 30일의 예상 집중률을 날짜순으로 반환한다.
      */
     public List<PlaceCrowdForecast> findWeeklyForecast(PlaceCrowdForecastQuery query) {
         Set<String> attractionNameKeys = attractionNameKeys(query.placeName(), query.aliasNames());
@@ -57,7 +58,7 @@ public class PlaceCrowdForecastProvider {
                 .map(this::toForecast)
                 .filter(forecast -> forecast != null && !forecast.forecastDate().isBefore(query.startDate()))
                 .sorted(java.util.Comparator.comparing(PlaceCrowdForecast::forecastDate))
-                .limit(WEEKLY_FORECAST_DAYS)
+                .limit(FORECAST_DAYS)
                 .toList();
     }
 
