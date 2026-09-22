@@ -3,6 +3,7 @@ package com.tourswitch.domain.vote.service;
 import com.tourswitch.domain.vote.response.ExtraCandidateTallyResponseDTO;
 import com.tourswitch.domain.course.repository.CourseExtraCandidateQueryRepository;
 import com.tourswitch.domain.course.service.CourseGenerationService;
+import com.tourswitch.domain.course.service.DraftCourseResetService;
 import com.tourswitch.domain.course.service.ExtraVoteService;
 import com.tourswitch.domain.vote.entity.RoomCandidate;
 import com.tourswitch.domain.vote.entity.RoomVote;
@@ -26,8 +27,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 계획 문서 4단계. 카드 선택 = 한 표. 취소는 행 삭제로 멱등하게 처리하고, 전원 완료 시
- * travel_room을 자동 종료한다(방장 수동 종료 경로와의 경합은 조건부 UPDATE로 안전하게 처리).
+ * 계획 문서 4단계. 카드 선택 = 한 표. 취소는 행 삭제로 멱등하게 처리한다.
+ * 1차 투표는 전원 완료 시 다음 라운드로 전환하되, 최종 방 종료는 방장 수동 종료만 수행한다.
  */
 @Service
 @RequiredArgsConstructor
@@ -36,6 +37,7 @@ public class VoteService {
 
     private static final String VOTING_STATUS = "VOTING";
     private static final String EXTRA_VOTING_STATUS = "EXTRA_VOTING";
+    private static final String CLOSED_STATUS = "CLOSED";
 
     private final RoomCandidateRepository roomCandidateRepository;
     private final RoomVoteRepository roomVoteRepository;
@@ -44,6 +46,7 @@ public class VoteService {
     private final CourseGenerationService courseGenerationService;
     private final CourseExtraCandidateQueryRepository courseExtraCandidateQueryRepository;
     private final ExtraVoteService extraVoteService;
+    private final DraftCourseResetService draftCourseResetService;
 
     @Transactional
     public VoteTallyResponseDTO selectCandidate(Long travelRoomId, Long candidateId, Long memberId) {
@@ -82,10 +85,37 @@ public class VoteService {
 
         roomParticipantQueryRepository.updateSelectionCompletion(travelRoomId, memberId, completed);
 
+        // 관광지 투표가 모두 끝나면 경유지를 확정해 추가 투표를 연다.
+        // 부가 후보가 없는 방은 closeVotingRound 안에서 바로 CLOSED가 되어 현황으로 간다.
         if (completed && roomParticipantQueryRepository.allParticipantsCompleted(travelRoomId)) {
             closeVotingRound(travelRoomId);
         }
 
+        return buildTally(travelRoomId, memberId);
+    }
+
+    /**
+     * 코스 확정 전에는 어떤 참여자든 1차 투표를 다시 열 수 있다.
+     * CLOSED였다면 이전 투표 결과를 바탕으로 만든 초안/부가 후보는 더 이상 유효하지 않아 함께 초기화한다.
+     */
+    @Transactional
+    public VoteTallyResponseDTO startRevote(Long travelRoomId, Long memberId) {
+        requireParticipant(travelRoomId, memberId);
+        String status = travelRoomStatusQueryRepository.findStatus(travelRoomId);
+
+        if (VOTING_STATUS.equals(status)) {
+            roomParticipantQueryRepository.updateSelectionCompletion(travelRoomId, memberId, false);
+            return buildTally(travelRoomId, memberId);
+        }
+        if (!CLOSED_STATUS.equals(status)) {
+            throw new VoteSessionNotActiveException("코스가 확정된 뒤에는 재투표할 수 없습니다.");
+        }
+
+        draftCourseResetService.deleteDraftForRoom(travelRoomId);
+        roomParticipantQueryRepository.resetRoundCompletions(travelRoomId);
+        if (!travelRoomStatusQueryRepository.reopenVotingIfClosed(travelRoomId)) {
+            throw new VoteSessionNotActiveException("투표 상태가 변경되어 재투표를 시작할 수 없습니다.");
+        }
         return buildTally(travelRoomId, memberId);
     }
 
