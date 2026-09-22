@@ -37,14 +37,14 @@ public class ExtraVoteService {
     private final TravelRoomStatusQueryRepository travelRoomStatusQueryRepository;
 
     public ExtraVoteResponseDTO getCandidates(Long travelRoomId, Long memberId) {
-        requireParticipant(travelRoomId, memberId);
+        requireHost(travelRoomId, memberId);
         return buildResponse(travelRoomId, memberId);
     }
 
     @Transactional
     public ExtraVoteResponseDTO vote(Long travelRoomId, Long candidateId, Long memberId) {
         requireExtraVotingSession(travelRoomId);
-        requireParticipant(travelRoomId, memberId);
+        requireHost(travelRoomId, memberId);
         requireCandidateInRoom(candidateId, travelRoomId);
 
         if (courseExtraVoteRepository.findByCourseExtraCandidateIdAndMemberId(candidateId, memberId).isEmpty()) {
@@ -56,7 +56,7 @@ public class ExtraVoteService {
     @Transactional
     public ExtraVoteResponseDTO cancelVote(Long travelRoomId, Long candidateId, Long memberId) {
         requireExtraVotingSession(travelRoomId);
-        requireParticipant(travelRoomId, memberId);
+        requireHost(travelRoomId, memberId);
         requireCandidateInRoom(candidateId, travelRoomId);
 
         courseExtraVoteRepository.findByCourseExtraCandidateIdAndMemberId(candidateId, memberId)
@@ -64,18 +64,13 @@ public class ExtraVoteService {
         return buildResponse(travelRoomId, memberId);
     }
 
-    /**
-     * 참여자가 추가 투표를 마쳤다고 알린다. 전원이 마치면 라운드를 닫는다.
-     */
+    /** 참여자가 추가 투표를 마쳤다고 알린다. 라운드 종료는 방장이 직접 수행한다. */
     @Transactional
     public ExtraVoteResponseDTO complete(Long travelRoomId, Long memberId) {
         requireExtraVotingSession(travelRoomId);
-        requireParticipant(travelRoomId, memberId);
+        requireHost(travelRoomId, memberId);
 
         roomParticipantQueryRepository.updateExtraSelectionCompletion(travelRoomId, memberId, true);
-        if (roomParticipantQueryRepository.allParticipantsExtraCompleted(travelRoomId)) {
-            closeExtraVotingRound(travelRoomId);
-        }
         return buildResponse(travelRoomId, memberId);
     }
 
@@ -113,6 +108,12 @@ public class ExtraVoteService {
     private void requireParticipant(Long travelRoomId, Long memberId) {
         if (!roomParticipantQueryRepository.isParticipant(travelRoomId, memberId)) {
             throw new VoteAccessDeniedException("이 방의 참여자가 아닙니다.");
+        }
+    }
+
+    private void requireHost(Long travelRoomId, Long memberId) {
+        if (!roomParticipantQueryRepository.isHost(travelRoomId, memberId)) {
+            throw new VoteAccessDeniedException("방장만 추가 투표를 진행할 수 있습니다.");
         }
     }
 
