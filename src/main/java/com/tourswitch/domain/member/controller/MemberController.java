@@ -4,11 +4,14 @@ import com.tourswitch.domain.member.request.UpdateNicknameRequestDTO;
 import com.tourswitch.domain.member.request.WithdrawMemberRequestDTO;
 import com.tourswitch.domain.member.response.MemberResponseDTO;
 import com.tourswitch.domain.member.service.MemberService;
+import com.tourswitch.domain.place.response.FavoritePlaceResponseDTO;
+import com.tourswitch.domain.place.service.PlaceFavoriteService;
 import com.tourswitch.global.response.GlobalRes;
 import com.tourswitch.global.security.cookie.RefreshTokenCookieManager;
 import com.tourswitch.global.security.principal.UserPrincipal;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
@@ -21,7 +24,18 @@ import org.springframework.web.bind.annotation.*;
 public class MemberController {
 
     private final MemberService memberService;
+    private final PlaceFavoriteService placeFavoriteService;
     private final RefreshTokenCookieManager refreshTokenCookieManager;
+
+    /**
+     * 현재 회원이 찜한 관광지의 최신 정보를 조회한다.
+     */
+    @GetMapping("/me/favorite-places")
+    public GlobalRes<List<FavoritePlaceResponseDTO>> getFavoritePlaces(
+        @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return GlobalRes.success(placeFavoriteService.getFavorites(principal.memberId()));
+    }
 
     /**
      * 내 정보 조회

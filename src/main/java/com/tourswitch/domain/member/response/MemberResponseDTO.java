@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 public record MemberResponseDTO(
     Long id
     , String nickname
+    , String avatarUrl
     , SocialProvider socialProvider
     , LocalDateTime createdAt
 ) {
@@ -15,6 +16,7 @@ public record MemberResponseDTO(
         return new MemberResponseDTO(
             member.getId(),
             member.getNickname(),
+            member.getProfileImageUrl(),
             member.getSocialProvider(),
             member.getCreatedAt()
         );

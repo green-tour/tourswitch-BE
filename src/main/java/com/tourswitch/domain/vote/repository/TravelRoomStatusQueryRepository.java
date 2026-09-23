@@ -73,6 +73,22 @@ public class TravelRoomStatusQueryRepository {
     }
 
     /**
+     * 코스가 확정되기 전(CLOSED)에만 1차 투표를 다시 연다.
+     * 확정된 코스는 여행 기록과 수요 집계의 기준이 되므로 되돌리지 않는다.
+     */
+    public boolean reopenVotingIfClosed(Long travelRoomId) {
+        int updated = entityManager.createNativeQuery("""
+                UPDATE travel_room SET status = :votingStatus, closed_at = NULL
+                WHERE id = :travelRoomId AND status = :closedStatus
+                """)
+                .setParameter("votingStatus", VOTING_STATUS)
+                .setParameter("travelRoomId", travelRoomId)
+                .setParameter("closedStatus", CLOSED_STATUS)
+                .executeUpdate();
+        return updated > 0;
+    }
+
+    /**
      * 8.1절: 2단계 부가 카테고리 확정 시 travel_room.status를 COURSE_CONFIRMED로 함께 바꾼다.
      */
     public boolean markCourseConfirmed(Long travelRoomId) {

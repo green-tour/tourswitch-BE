@@ -90,7 +90,7 @@ public class PlaceSearchService {
     }
 
     /**
-     * 관광지 상세 정보와 오늘부터 최대 7일의 집중률 예측을 반환한다.
+     * 관광지 상세 정보와 오늘부터 최대 30일의 집중률 예측을 반환한다.
      */
     public PlaceDetailResponseDTO getDetail(String contentId, Long regionId) {
         TourApiSpotDetail detail = korServiceClient.detailCommon2(contentId).orElseThrow(PlaceNotFoundException::new);
