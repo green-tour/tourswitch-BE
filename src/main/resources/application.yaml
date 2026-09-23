@@ -54,6 +54,7 @@ spring:
             redirect-uri: ${OAUTH2_REDIRECT_URI:{baseUrl}/api/auth/oauth2/callback/{registrationId}}
             scope:
               - profile_nickname
+              - profile_image
             client-name: Kakao
 
         provider:
