@@ -28,7 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 계획 문서 4단계. 카드 선택 = 한 표. 취소는 행 삭제로 멱등하게 처리한다.
- * 1차 투표는 전원 완료 시 다음 라운드로 전환하되, 최종 방 종료는 방장 수동 종료만 수행한다.
+ * 투표 라운드 전환과 종료는 방장의 수동 종료만으로 수행한다.
  */
 @Service
 @RequiredArgsConstructor
@@ -85,12 +85,6 @@ public class VoteService {
 
         roomParticipantQueryRepository.updateSelectionCompletion(travelRoomId, memberId, completed);
 
-        // 관광지 투표가 모두 끝나면 경유지를 확정해 추가 투표를 연다.
-        // 부가 후보가 없는 방은 closeVotingRound 안에서 바로 CLOSED가 되어 현황으로 간다.
-        if (completed && roomParticipantQueryRepository.allParticipantsCompleted(travelRoomId)) {
-            closeVotingRound(travelRoomId);
-        }
-
         return buildTally(travelRoomId, memberId);
     }
 
@@ -123,7 +117,7 @@ public class VoteService {
      * 관광지 투표를 끝낸다. 득표를 집계해 경유지를 확정하고 그 좌표로 부가 후보를 만든다.
      * 부가 옵션을 켠 방은 추가 투표 라운드로 넘어가고, 아니면 바로 닫힌다.
      *
-     * 전원 완료와 방장 수동 종료가 경합할 수 있어 조건부 UPDATE가 성공한 쪽만 코스를 만든다.
+     * 방장의 수동 종료 요청이 성공한 경우에만 코스를 만든다.
      */
     @Transactional
     public void closeVotingRound(Long travelRoomId) {
