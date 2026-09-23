@@ -24,25 +24,39 @@ public class LoginMemberService {
     @Transactional
     public LoginMemberResult findOrCreateKakaoMember(
         String socialId,
-        String nickname
+        String nickname,
+        String profileImageUrl
     ) {
         return memberRepository.findBySocialProviderAndSocialId(
                 SocialProvider.KAKAO,
                 socialId
             )
-            .map(this::validateExistingMember)
+            .map(member -> restoreOrValidateExistingMember(
+                member,
+                nickname,
+                profileImageUrl
+            ))
             .orElseGet(() ->
-                createNewMember(socialId, nickname)
+                createNewMember(socialId, nickname, profileImageUrl)
             );
     }
 
     /**
      * 기존 회원 처리
      */
-    private LoginMemberResult validateExistingMember(
-        Member member
+    private LoginMemberResult restoreOrValidateExistingMember(
+        Member member,
+        String nickname,
+        String profileImageUrl
     ) {
+        if (member.getStatus() == MemberStatus.WITHDRAWN) {
+            member.rejoin(nickname, profileImageUrl);
+
+            return new LoginMemberResult(member, false);
+        }
+
         validateActiveMember(member);
+        member.updateProfileImageUrl(profileImageUrl);
 
         return new LoginMemberResult(
             member,
@@ -64,12 +78,14 @@ public class LoginMemberService {
      */
     private LoginMemberResult createNewMember(
         String socialId,
-        String nickname
+        String nickname,
+        String profileImageUrl
     ) {
         Member member = Member.createSocialMember(
             SocialProvider.KAKAO,
             socialId,
-            nickname
+            nickname,
+            profileImageUrl
         );
 
         Member savedMember =
@@ -91,6 +107,9 @@ public class LoginMemberService {
             SocialProvider.KAKAO,
             socialId
         )
-        .map(this::validateExistingMember);
+        .map(member -> {
+            validateActiveMember(member);
+            return new LoginMemberResult(member, false);
+        });
     }
 }

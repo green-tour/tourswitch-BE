@@ -37,6 +37,9 @@ public class Member {
     @Column(name = "nickname", nullable = false)
     private String nickname;
 
+    @Column(name = "profile_image_url", length = 500)
+    private String profileImageUrl;
+
     @Column(name = "refresh_token_hash")
     private String refreshTokenHash;
 
@@ -63,13 +66,15 @@ public class Member {
     public static Member createSocialMember(
         SocialProvider socialProvider,
         String socialId,
-        String nickname
+        String nickname,
+        String profileImageUrl
     ) {
         Member member = new Member();
 
         member.socialProvider = socialProvider;
         member.socialId = socialId;
         member.nickname = nickname;
+        member.profileImageUrl = profileImageUrl;
         member.status = MemberStatus.ACTIVE;
 
         return member;
@@ -79,12 +84,25 @@ public class Member {
         this.nickname = nickname;
     }
 
+    /** 카카오 로그인 시 제공된 프로필 이미지를 최신 값으로 갱신한다. */
+    public void updateProfileImageUrl(String profileImageUrl) {
+        this.profileImageUrl = profileImageUrl;
+    }
+
     public void withdraw() {
         this.status = MemberStatus.WITHDRAWN;
         this.withdrawnAt = LocalDateTime.now();
         this.nickname = "탈퇴한 회원";
 
         clearRefreshToken();
+    }
+
+    /** 탈퇴한 카카오 계정이 다시 로그인하면 회원 상태를 복구한다. */
+    public void rejoin(String nickname, String profileImageUrl) {
+        this.status = MemberStatus.ACTIVE;
+        this.withdrawnAt = null;
+        this.nickname = nickname;
+        this.profileImageUrl = profileImageUrl;
     }
 
     /**

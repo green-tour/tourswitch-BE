@@ -64,19 +64,20 @@ public class ExtraVoteService {
         return buildResponse(travelRoomId, memberId);
     }
 
-    /** 참여자가 추가 투표를 마쳤다고 알린다. 라운드 종료는 방장이 직접 수행한다. */
+    /** 방장이 추가 투표를 완료하면 결과를 확정해 추천 코스를 바로 볼 수 있게 한다. */
     @Transactional
     public ExtraVoteResponseDTO complete(Long travelRoomId, Long memberId) {
         requireExtraVotingSession(travelRoomId);
         requireHost(travelRoomId, memberId);
 
         roomParticipantQueryRepository.updateExtraSelectionCompletion(travelRoomId, memberId, true);
+        closeExtraVotingRound(travelRoomId);
         return buildResponse(travelRoomId, memberId);
     }
 
     /**
      * 역할별 최다 득표 한 곳을 확정하고 방을 닫는다.
-     * 전원 완료와 방장 수동 종료가 경합할 수 있어 조건부 UPDATE가 성공한 쪽만 확정한다.
+     * 방장의 수동 종료 요청이 성공한 경우에만 확정한다.
      */
     @Transactional
     public void closeExtraVotingRound(Long travelRoomId) {
