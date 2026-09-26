@@ -89,8 +89,8 @@ public class VoteService {
     }
 
     /**
-     * 코스 확정 전에는 어떤 참여자든 1차 투표를 다시 열 수 있다.
-     * CLOSED였다면 이전 투표 결과를 바탕으로 만든 초안/부가 후보는 더 이상 유효하지 않아 함께 초기화한다.
+     * 투표 중에는 참여자가 자기 완료 표시만 되돌린다.
+     * CLOSED 방을 다시 여는 것은 방 전체의 초안/부가 후보를 초기화하므로 방장만 할 수 있다.
      */
     @Transactional
     public VoteTallyResponseDTO startRevote(Long travelRoomId, Long memberId) {
@@ -103,6 +103,9 @@ public class VoteService {
         }
         if (!CLOSED_STATUS.equals(status)) {
             throw new VoteSessionNotActiveException("코스가 확정된 뒤에는 재투표할 수 없습니다.");
+        }
+        if (!roomParticipantQueryRepository.isHost(travelRoomId, memberId)) {
+            throw new VoteAccessDeniedException("방장만 재투표를 시작할 수 있습니다.");
         }
 
         draftCourseResetService.deleteDraftForRoom(travelRoomId);
