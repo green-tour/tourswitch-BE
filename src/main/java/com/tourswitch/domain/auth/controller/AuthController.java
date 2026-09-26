@@ -2,6 +2,7 @@ package com.tourswitch.domain.auth.controller;
 
 import com.tourswitch.domain.auth.response.RefreshResponseDTO;
 import com.tourswitch.domain.auth.service.RefreshTokenService;
+import com.tourswitch.global.config.security.FrontendProperties;
 import com.tourswitch.global.response.GlobalRes;
 import com.tourswitch.global.security.cookie.RefreshTokenCookieManager;
 import com.tourswitch.global.security.jwt.TokenPair;
@@ -28,13 +29,17 @@ public class AuthController {
 
     private final RefreshTokenService refreshTokenService;
     private final RefreshTokenCookieManager refreshTokenCookieManager;
+    private final FrontendProperties frontendProperties;
 
     /**
      * 카카오 로그인 시작
+     * 카카오 콜백이 FE 도메인으로 돌아오므로 인가 요청도 FE 도메인(프록시)에서 시작해야
+     * 인가 세션 쿠키가 콜백에 전달된다. 상대 경로로 두면 프록시 뒤의 BE 호스트로 리다이렉트된다.
      */
     @GetMapping("/login")
     public RedirectView login() {
-        return new RedirectView(KAKAO_AUTHORIZATION_URI);
+        String frontendOrigin = frontendProperties.origin().replaceAll("/+$", "");
+        return new RedirectView(frontendOrigin + KAKAO_AUTHORIZATION_URI);
     }
 
     /**
